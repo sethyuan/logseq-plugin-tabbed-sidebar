@@ -14,10 +14,12 @@
   "dependencies": {
     "@logseq/libs": "^0.0.15",
     "logseq-l10n": "^0.2.0",
+    "marked": "^5.1.0",
     "preact": "^10.14.1"
   },
   "devDependencies": {
     "@preact/preset-vite": "^2.5.0",
+    "@types/marked": "^5.0.0",
     "@types/node": "^18.15.11",
     "typescript": "^5.0.4",
     "vite": "^4.3.7",

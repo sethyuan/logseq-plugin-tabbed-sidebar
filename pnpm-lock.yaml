@@ -11,6 +11,9 @@ dependencies:
   logseq-l10n:
     specifier: ^0.2.0
     version: 0.2.0(@logseq/libs@0.0.15)
+  marked:
+    specifier: ^5.1.0
+    version: 5.1.0
   preact:
     specifier: ^10.14.1
     version: 10.14.1
@@ -19,6 +22,9 @@ devDependencies:
   '@preact/preset-vite':
     specifier: ^2.5.0
     version: 2.5.0(@babel/core@7.22.5)(preact@10.14.1)(vite@4.3.7)
+  '@types/marked':
+    specifier: ^5.0.0
+    version: 5.0.0
   '@types/node':
     specifier: ^18.15.11
     version: 18.15.11
@@ -592,6 +598,10 @@ packages:
       picomatch: 2.3.1
     dev: true
 
+  /@types/marked@5.0.0:
+    resolution: {integrity: sha512-YcZe50jhltsCq7rc9MNZC/4QB/OnA2Pd6hrOSTOFajtabN+38slqgDDCeE/0F83SjkKBQcsZUj7VLWR0H5cKRA==}
+    dev: true
+
   /@types/node@18.15.11:
     resolution: {integrity: sha512-E5Kwq2n4SbMzQOn6wnmBjuK9ouqlURrcZDVfbo9ftDDTFt3nk7ZKK4GMOzoYgnpQJKcxwQw+lGaBvvlMo0qN/Q==}
     dev: true
@@ -825,6 +835,12 @@ packages:
     dependencies:
       sourcemap-codec: 1.4.8
     dev: true
+
+  /marked@5.1.0:
+    resolution: {integrity: sha512-z3/nBe7aTI8JDszlYLk7dDVNpngjw0o1ZJtrA9kIfkkHcIF+xH7mO23aISl4WxP83elU+MFROgahqdpd05lMEQ==}
+    engines: {node: '>= 18'}
+    hasBin: true
+    dev: false
 
   /ms@2.1.2:
     resolution: {integrity: sha512-sGkPx+VjMtmA6MX27oA4FBFELFCZZ4S4XqeGOXCv68tT+jb3vk/RyaKWP0PTKyWtmLSM0b+adUTEvbs1PEaH2w==}
