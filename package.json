@@ -1,0 +1,26 @@
+{
+  "name": "logseq-plugin-tabbed-sidebar",
+  "version": "0.1.0",
+  "main": "dist/index.html",
+  "logseq": {
+    "id": "_sethyuan-logseq-tabbed-sidebar",
+    "icon": "./icon.png"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@logseq/libs": "^0.0.15",
+    "logseq-l10n": "^0.2.0",
+    "preact": "^10.14.1"
+  },
+  "devDependencies": {
+    "@preact/preset-vite": "^2.5.0",
+    "@types/node": "^18.15.11",
+    "typescript": "^5.0.4",
+    "vite": "^4.3.7",
+    "vite-plugin-logseq": "^1.1.2"
+  }
+}
