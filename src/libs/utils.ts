@@ -45,3 +45,7 @@ export async function parseContent(content: string) {
 
   return content.trim()
 }
+
+export function isElement(node: Node): node is HTMLElement {
+  return node.nodeType === 1
+}

@@ -86,6 +86,6 @@ const tokenizer: marked.TokenizerObject = {
   },
 }
 
-marked.use({ renderer, tokenizer })
+marked.use({ renderer, tokenizer, mangle: false, headerIds: false })
 
 export const parse = marked.parse
