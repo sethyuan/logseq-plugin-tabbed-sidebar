@@ -4,6 +4,8 @@
 
 将右侧边栏 tabs 化。
 
+![image](https://github.com/sethyuan/logseq-plugin-tabbed-sidebar/assets/3410293/48a6d87e-3a47-4b1f-886e-d3d942be83a5)
+
 ## 功能特色
 
 - 将在右侧边栏打开的块/页面以 tabs 的形式进行管理，提升有多内容时的使用体验。
