@@ -2,11 +2,13 @@
 
 # logseq-plugin-tabbed-sidebar
 
-Tab based alternative sidebar with history.
+Alternative sidebar that's organized in tabs.
 
 ## Feature Highlights
 
-TODO
+- Manage the blocks/pages opened in the right sidebar as tabs to improve UX when there are multiple items.
+- Shift-clicking a tab will jump to the corresponding block/page in the main page area.
+- The tab bar supports the display of the page icon property.
 
 ## Usage
 

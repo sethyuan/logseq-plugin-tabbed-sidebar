@@ -2,11 +2,13 @@
 
 # logseq-plugin-tabbed-sidebar
 
-基于 Tabs 的有历史的侧边栏。
+将右侧边栏 tabs 化。
 
 ## 功能特色
 
-TODO
+- 将在右侧边栏打开的块/页面以 tabs 的形式进行管理，提升有多内容时的使用体验。
+- Shift 点击一个 tab 会在主页面区域跳转到对应的块/页面。
+- tab 栏支持页面 icon 属性的显示。
 
 ## 使用展示
 
