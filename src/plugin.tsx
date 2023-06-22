@@ -96,6 +96,12 @@ function provideStyles() {
     #kef-ts-tabs .mt-1.ml-1 {
       display: none;
     }
+    .kef-ts-block-title {
+      margin-right: 4px;
+    }
+    .kef-ts-block-title + a.page-title {
+      display: inline-block;
+    }
     `,
   })
 }
@@ -141,7 +147,7 @@ function refreshTabs(hasExistent: boolean = false) {
       activeIdx < container.childElementCount ? activeIdx : activeIdx - 1,
     )
   } else {
-    updateBlockTabs(container)
+    updateTabs(container)
   }
 }
 
@@ -209,7 +215,7 @@ async function setActive(idx: number) {
   }
   activeIdx = idx
 
-  await updateBlockTabs(container)
+  await updateTabs(container)
 
   const itemListLen = itemList.children.length
   for (let i = 0; i < itemListLen; i++) {
@@ -222,34 +228,35 @@ async function setActive(idx: number) {
   }
 }
 
-async function updateBlockTabs(container: HTMLElement) {
+async function updateTabs(container: HTMLElement) {
   const sideBlocks = await logseq.App.getStateFromStore("sidebar/blocks")
   for (let i = 0; i < container.children.length; i++) {
     const [_graph, id, type] = sideBlocks[sideBlocks.length - 1 - i]
-
-    if (type !== "block") {
-      const span = container.children[i].querySelector(
-        ".ml-1.font-medium > .kef-ts-block-title",
-      ) as HTMLElement
-      if (span) {
-        span.remove()
-      }
-      continue
+    const tab = container.children[i]
+    const titleContainer = tab.querySelector(".ml-1.font-medium")
+    if (titleContainer == null) continue
+    let span = titleContainer.querySelector(".kef-ts-block-title")
+    if (span == null) {
+      span = parent.document.createElement("span")
+      span.classList.add("kef-ts-block-title")
+      titleContainer.prepend(span)
     }
 
-    const block = await logseq.Editor.getBlock(id)
-    if (block == null) continue
-    const tabTitleEl = container.children[i].querySelector(
-      ".ml-1.font-medium",
-    ) as HTMLElement
-    const tabTitleSpan = tabTitleEl.querySelector(".kef-ts-block-title")
-    if (tabTitleSpan == null) {
-      const span = parent.document.createElement("span")
-      span.classList.add("kef-ts-block-title")
-      span.textContent = await parseContent(block.content)
-      tabTitleEl.prepend(span)
-    } else {
-      tabTitleSpan.textContent = await parseContent(block.content)
+    switch (type) {
+      case "page": {
+        const page = await logseq.Editor.getPage(id)
+        if (page == null) continue
+        span.innerHTML = page.properties?.icon ?? ""
+        break
+      }
+      case "block": {
+        const block = await logseq.Editor.getBlock(id)
+        if (block == null) continue
+        span.innerHTML = await parseContent(block.content)
+        break
+      }
+      default:
+        break
     }
   }
 }
