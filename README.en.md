@@ -4,6 +4,8 @@
 
 Alternative sidebar that's organized in tabs.
 
+![image](https://github.com/sethyuan/logseq-plugin-tabbed-sidebar/assets/3410293/48a6d87e-3a47-4b1f-886e-d3d942be83a5)
+
 ## Feature Highlights
 
 - Manage the blocks/pages opened in the right sidebar as tabs to improve UX when there are multiple items.
