@@ -215,8 +215,6 @@ async function setActive(idx: number) {
   }
   activeIdx = idx
 
-  await updateTabs(container)
-
   const itemListLen = itemList.children.length
   for (let i = 0; i < itemListLen; i++) {
     const item = itemList.children[itemListLen - 1 - i] as HTMLElement
@@ -226,39 +224,42 @@ async function setActive(idx: number) {
       item.style.display = "none"
     }
   }
+
+  await updateTabs(container)
 }
 
 async function updateTabs(container: HTMLElement) {
   const sideBlocks = await logseq.App.getStateFromStore("sidebar/blocks")
-  for (let i = 0; i < container.children.length; i++) {
-    const [_graph, id, type] = sideBlocks[sideBlocks.length - 1 - i]
-    const tab = container.children[i]
-    const titleContainer = tab.querySelector(".ml-1.font-medium")
-    if (titleContainer == null) continue
-    let span = titleContainer.querySelector(".kef-ts-block-title")
-    if (span == null) {
-      span = parent.document.createElement("span")
-      span.classList.add("kef-ts-block-title")
-      titleContainer.prepend(span)
-    }
+  await Promise.all(
+    Array.prototype.map.call(container.children, async (tab, i) => {
+      const [_graph, id, type] = sideBlocks[sideBlocks.length - 1 - i]
+      const titleContainer = tab.querySelector(".ml-1.font-medium")
+      if (titleContainer == null) return
+      let span = titleContainer.querySelector(".kef-ts-block-title")
+      if (span == null) {
+        span = parent.document.createElement("span")
+        span.classList.add("kef-ts-block-title")
+        titleContainer.prepend(span)
+      }
 
-    switch (type) {
-      case "page": {
-        const page = await logseq.Editor.getPage(id)
-        if (page == null) continue
-        span.innerHTML = page.properties?.icon ?? ""
-        break
+      switch (type) {
+        case "page": {
+          const page = await logseq.Editor.getPage(id)
+          if (page == null) return
+          span.innerHTML = page.properties?.icon ?? ""
+          break
+        }
+        case "block": {
+          const block = await logseq.Editor.getBlock(id)
+          if (block == null) return
+          span.innerHTML = await parseContent(block.content)
+          break
+        }
+        default:
+          break
       }
-      case "block": {
-        const block = await logseq.Editor.getBlock(id)
-        if (block == null) continue
-        span.innerHTML = await parseContent(block.content)
-        break
-      }
-      default:
-        break
-    }
-  }
+    }),
+  )
 }
 
 logseq.ready(main).catch(console.error)
