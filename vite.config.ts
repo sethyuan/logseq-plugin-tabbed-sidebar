@@ -19,7 +19,7 @@ export default defineConfig(({ mode }) => {
           plugin: resolve(__dirname, "index.html"),
         },
         output: {
-          entryFileNames: "[name].js",
+          entryFileNames: "[name]-[hash].js",
           assetFileNames: "[name][extname]",
         },
       },

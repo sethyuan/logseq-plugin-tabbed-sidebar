@@ -4,6 +4,7 @@ import { isElement, parseContent } from "./libs/utils"
 import zhCN from "./translations/zh-CN.json"
 
 let activeIdx = 0
+let lastActiveIdx = 0
 let lastDeleteIdx = -1
 
 async function main() {
@@ -141,10 +142,18 @@ function refreshTabs(hasExistent: boolean = false) {
     setActive(container.childElementCount - 1)
   } else if (newTabs.length > 0) {
     setActive(0)
-  } else if (lastDeleteIdx >= activeIdx) {
+  } else if (lastDeleteIdx > activeIdx) {
     lastDeleteIdx = -1
     setActive(
       activeIdx < container.childElementCount ? activeIdx : activeIdx - 1,
+    )
+  } else if (lastDeleteIdx === activeIdx) {
+    setActive(
+      lastActiveIdx > lastDeleteIdx
+        ? lastActiveIdx - 1
+        : lastActiveIdx < container.childElementCount
+        ? lastActiveIdx
+        : lastActiveIdx - 1,
     )
   } else {
     updateTabs(container)
@@ -213,6 +222,7 @@ async function setActive(idx: number) {
       tab.classList.remove("kef-ts-active")
     }
   }
+  lastActiveIdx = activeIdx
   activeIdx = idx
 
   const itemListLen = itemList.children.length
