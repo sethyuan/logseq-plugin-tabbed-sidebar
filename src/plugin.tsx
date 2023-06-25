@@ -12,10 +12,12 @@ async function main() {
 
   provideStyles()
 
-  const offHook = logseq.App.onSidebarVisibleChanged(({ visible }) => {
-    if (!visible) return
-    renderTabs()
-  })
+  const sidebarVisibleOffHook = logseq.App.onSidebarVisibleChanged(
+    ({ visible }) => {
+      if (!visible) return
+      renderTabs()
+    },
+  )
 
   let sidebarItemObserver: MutationObserver | undefined
   const sidebar = parent.document.getElementById("right-sidebar")
@@ -45,9 +47,14 @@ async function main() {
     sidebarItemObserver.observe(sidebar, { childList: true, subtree: true })
   }
 
+  const graphChangeOffHook = logseq.App.onCurrentGraphChanged(() => {
+    logseq.App.clearRightSidebarBlocks()
+  })
+
   logseq.beforeunload(async () => {
     sidebarItemObserver?.disconnect()
-    offHook()
+    sidebarVisibleOffHook()
+    graphChangeOffHook()
   })
 
   console.log("#tabbed-sidebar loaded")
