@@ -14,7 +14,8 @@ Alternative sidebar that's organized in tabs.
 
 ## Usage
 
-TODO
+https://github.com/sethyuan/logseq-plugin-tabbed-sidebar/assets/3410293/a61f80a1-efc6-4234-84c4-9cbc17cd8bb5
+
 
 ## Buy me a coffee
 
