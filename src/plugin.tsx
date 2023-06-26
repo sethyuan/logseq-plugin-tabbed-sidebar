@@ -3,6 +3,7 @@ import { setup } from "logseq-l10n"
 import { isElement, parseContent } from "./libs/utils"
 import zhCN from "./translations/zh-CN.json"
 
+let lastSidebarItemCount = -1
 let activeIdx = 0
 let lastActiveIdx = 0
 let lastDeleteIdx = -1
@@ -13,9 +14,14 @@ async function main() {
   provideStyles()
 
   const sidebarVisibleOffHook = logseq.App.onSidebarVisibleChanged(
-    ({ visible }) => {
-      if (!visible) return
-      renderTabs()
+    async ({ visible }) => {
+      if (visible) {
+        renderTabs()
+      } else {
+        lastSidebarItemCount = (
+          await logseq.App.getStateFromStore("sidebar/blocks")
+        ).length
+      }
     },
   )
 
@@ -123,8 +129,6 @@ function renderTabs() {
   container.id = "kef-ts-tabs"
   container.addEventListener("click", onTabClick)
   topBar.after(container)
-
-  setActive(0)
 }
 
 function refreshTabs(hasExistent: boolean = false) {
@@ -145,10 +149,14 @@ function refreshTabs(hasExistent: boolean = false) {
     container.children[0].remove()
   }
 
-  if (newTabs.length === 1 || hasExistent) {
+  if (
+    newTabs.length === 1 ||
+    hasExistent ||
+    (newTabs.length > lastSidebarItemCount && lastSidebarItemCount > -1)
+  ) {
     setActive(container.childElementCount - 1)
-  } else if (newTabs.length > 0) {
-    setActive(0)
+  } else if (newTabs.length > 1) {
+    setActive(activeIdx)
   } else if (lastDeleteIdx > activeIdx) {
     lastDeleteIdx = -1
     setActive(
