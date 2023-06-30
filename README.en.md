@@ -18,6 +18,8 @@ Alternative sidebar that's organized in tabs.
 
 https://github.com/sethyuan/logseq-plugin-tabbed-sidebar/assets/3410293/a61f80a1-efc6-4234-84c4-9cbc17cd8bb5
 
+https://github.com/sethyuan/logseq-plugin-tabbed-sidebar/assets/3410293/2fd54298-a0da-48f8-b3c1-9a70779e0ce1
+
 ## Buy me a coffee
 
 If you think the software I have developed is helpful to you and would like to give recognition and support, you may buy me a coffee using following link. Thank you for your support and attention.
