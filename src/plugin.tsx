@@ -7,10 +7,13 @@ let lastSidebarItemCount = -1
 let activeIdx = 0
 let lastActiveIdx = 0
 let lastDeleteIdx = -1
+let reordering = false
+let drake: any = null
 
 async function main() {
   await setup({ builtinTranslations: { "zh-CN": zhCN } })
 
+  injectDeps()
   provideStyles()
 
   const sidebarVisibleOffHook = logseq.App.onSidebarVisibleChanged(
@@ -64,6 +67,32 @@ async function main() {
   })
 
   console.log("#tabbed-sidebar loaded")
+}
+
+function injectDeps() {
+  const base = getBase(document.baseURI)
+  const js = `${base}/dragula.min.3.7.3.js`
+  const css = `${base}/dragula.min.3.7.3.css`
+  if (!parent.document.body.querySelector(`script[src="${js}"]`)) {
+    const script = parent.document.createElement("script")
+    script.src = js
+    parent.document.body.append(script)
+  }
+  if (!parent.document.head.querySelector(`link[href="${css}"]`)) {
+    const link = parent.document.createElement("link")
+    link.rel = "stylesheet"
+    link.href = css
+    link.type = "text/css"
+    parent.document.head.append(link)
+  }
+}
+
+function getBase(uri: string) {
+  const index = document.baseURI.lastIndexOf("/")
+  if (index > -1) {
+    return uri.substring(0, index)
+  }
+  return uri
 }
 
 function provideStyles() {
@@ -129,6 +158,12 @@ function renderTabs() {
   container.id = "kef-ts-tabs"
   container.addEventListener("click", onTabClick)
   topBar.after(container)
+
+  drake = (parent as any).dragula([container], {
+    direction: "horizontal",
+    mirrorContainer: container,
+  })
+  drake.on("drop", onDrop)
 }
 
 function refreshTabs(hasExistent: boolean = false) {
@@ -150,15 +185,15 @@ function refreshTabs(hasExistent: boolean = false) {
   }
 
   if (
-    newTabs.length === 1 ||
-    hasExistent ||
-    (newTabs.length > lastSidebarItemCount && lastSidebarItemCount > -1)
+    (newTabs.length === 1 ||
+      hasExistent ||
+      (newTabs.length > lastSidebarItemCount && lastSidebarItemCount > -1)) &&
+    !reordering
   ) {
     setActive(container.childElementCount - 1)
   } else if (newTabs.length > 1) {
     setActive(activeIdx)
   } else if (lastDeleteIdx > activeIdx) {
-    lastDeleteIdx = -1
     setActive(
       activeIdx < container.childElementCount ? activeIdx : activeIdx - 1,
     )
@@ -173,6 +208,8 @@ function refreshTabs(hasExistent: boolean = false) {
   } else {
     updateTabs(container)
   }
+  lastDeleteIdx = -1
+  reordering = false
 }
 
 async function onTabClick(e: MouseEvent) {
@@ -223,7 +260,7 @@ async function onTabClick(e: MouseEvent) {
   }
 }
 
-async function setActive(idx: number) {
+async function setActive(idx: number, updateLastActive: boolean = true) {
   const container = parent.document.getElementById("kef-ts-tabs")
   if (container == null) return
   const itemList = parent.document.querySelector(".sidebar-item-list")
@@ -237,8 +274,11 @@ async function setActive(idx: number) {
       tab.classList.remove("kef-ts-active")
     }
   }
-  lastActiveIdx = activeIdx
-  activeIdx = idx
+
+  if (updateLastActive) {
+    lastActiveIdx = activeIdx
+    activeIdx = idx
+  }
 
   const itemListLen = itemList.children.length
   for (let i = 0; i < itemListLen; i++) {
@@ -285,6 +325,45 @@ async function updateTabs(container: HTMLElement) {
       }
     }),
   )
+}
+
+async function onDrop(
+  el: HTMLElement,
+  target: HTMLElement,
+  source: HTMLElement,
+  sibling: HTMLElement,
+) {
+  const targetIndex =
+    sibling == null
+      ? target.childElementCount - 1
+      : Array.prototype.indexOf.call(target.children, sibling) - 1
+  drake.cancel(true)
+  const sourceIndex = Array.prototype.indexOf.call(target.children, el)
+
+  const stateSidebarBlocks = await logseq.App.getStateFromStore(
+    "sidebar/blocks",
+  )
+  const stateSourceIndex = stateSidebarBlocks.length - 1 - sourceIndex
+  const stateTargetIndex = stateSidebarBlocks.length - 1 - targetIndex
+  const sourceItem = stateSidebarBlocks.splice(stateSourceIndex, 1)
+  stateSidebarBlocks.splice(stateTargetIndex, 0, ...sourceItem)
+  reordering = true
+  await logseq.App.setStateFromStore("sidebar/blocks", stateSidebarBlocks)
+
+  if (
+    (sourceIndex < activeIdx && targetIndex < activeIdx) ||
+    (sourceIndex > activeIdx && targetIndex > activeIdx)
+  )
+    return
+  if (sourceIndex > activeIdx) {
+    await setActive(activeIdx + 1, false)
+  } else if (sourceIndex < activeIdx) {
+    await setActive(activeIdx - 1, false)
+  } else if (targetIndex > activeIdx) {
+    await setActive(activeIdx + 1, false)
+  } else {
+    await setActive(activeIdx - 1, false)
+  }
 }
 
 logseq.ready(main).catch(console.error)

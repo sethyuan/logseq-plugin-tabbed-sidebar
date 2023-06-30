@@ -19,9 +19,9 @@ export async function parseContent(content: string) {
     try {
       const refBlock = await logseq.Editor.getBlock(refUUID)
       const refFirstLine = refBlock?.content.match(/.*/)?.[0]
-      const [refContent] = refFirstLine
+      const refContent = refFirstLine
         ? await parseContent(refFirstLine)
-        : [refUUID]
+        : refUUID
       content = `${content.substring(0, start)}${refContent}${content.substring(
         end,
       )}`
