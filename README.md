@@ -18,6 +18,8 @@
 
 https://github.com/sethyuan/logseq-plugin-tabbed-sidebar/assets/3410293/a61f80a1-efc6-4234-84c4-9cbc17cd8bb5
 
+https://github.com/sethyuan/logseq-plugin-tabbed-sidebar/assets/3410293/2fd54298-a0da-48f8-b3c1-9a70779e0ce1
+
 ## Buy me a coffee
 
 如果您认为我所开发的软件对您有所帮助，并且愿意给予肯定和支持，不妨扫描下方的二维码进行打赏。感谢您的支持与关注。
