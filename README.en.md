@@ -11,11 +11,12 @@ Alternative sidebar that's organized in tabs.
 - Manage the blocks/pages opened in the right sidebar as tabs to improve UX when there are multiple items.
 - Shift-clicking a tab will jump to the corresponding block/page in the main page area.
 - The tab bar supports the display of the page icon property.
+- Batch closing tabs is possible through the context menu.
+- Drag to reorder the tabs.
 
 ## Usage
 
 https://github.com/sethyuan/logseq-plugin-tabbed-sidebar/assets/3410293/a61f80a1-efc6-4234-84c4-9cbc17cd8bb5
-
 
 ## Buy me a coffee
 
