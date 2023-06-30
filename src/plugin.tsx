@@ -1,5 +1,7 @@
 import "@logseq/libs"
-import { setup } from "logseq-l10n"
+import { setup, t } from "logseq-l10n"
+import { render } from "preact"
+import Menu from "./comps/Menu"
 import { isElement, parseContent } from "./libs/utils"
 import zhCN from "./translations/zh-CN.json"
 
@@ -145,6 +147,27 @@ function provideStyles() {
     .kef-ts-block-title + a.page-title {
       display: inline-block;
     }
+    .kef-ts-menu {
+      position: fixed;
+      box-shadow: 0 2px 8px 0 var(--ls-block-bullet-color);
+      background-color: var(--ls-secondary-background-color);
+      padding: 0.5em 0;
+      z-index: var(--ls-z-index-level-2);
+    }
+    .kef-ts-menu:focus-visible {
+      outline: none;
+    }
+    .kef-ts-menu-item {
+      display: block;
+      padding: 0.5em 0.75em;
+      width: 100%;
+      text-align: left;
+      user-select: none;
+      font-size: 0.875em;
+    }
+    .kef-ts-menu-item:hover {
+      background-color: var(--ls-primary-background-color);
+    }
     `,
   })
 }
@@ -157,6 +180,7 @@ function renderTabs() {
   const container = parent.document.createElement("div")
   container.id = "kef-ts-tabs"
   container.addEventListener("click", onTabClick)
+  container.addEventListener("contextmenu", onTabContextMenu)
   topBar.after(container)
 
   drake = (parent as any).dragula([container], {
@@ -258,6 +282,52 @@ async function onTabClick(e: MouseEvent) {
   } else {
     setActive(index)
   }
+}
+
+async function onTabContextMenu(e: MouseEvent) {
+  e.preventDefault()
+
+  const path = e.composedPath()
+  const el = path.find(
+    (x) => (x as Node).parentElement?.id === "kef-ts-tabs",
+  ) as HTMLElement
+  if (el == null) return
+  const container = el.parentElement!
+  const index = Array.prototype.indexOf.call(container.children, el)
+  if (index < 0) return
+
+  e.stopImmediatePropagation()
+
+  const menuContainer = parent.document.createElement("div")
+  parent.document.body.append(menuContainer)
+  // ensure context menu stays inside the viewport.
+  const x = Math.min(e.clientX, parent.innerWidth - 168)
+  render(
+    <Menu x={x} y={e.clientY} onClose={() => unrender(menuContainer)}>
+      <button
+        class="kef-ts-menu-item"
+        onClick={() => close(index, menuContainer)}
+      >
+        {t("Close")}
+      </button>
+      <button
+        class="kef-ts-menu-item"
+        onClick={() => closeOthers(index, menuContainer)}
+      >
+        {t("Close Others")}
+      </button>
+      <button
+        class="kef-ts-menu-item"
+        onClick={() => closeRight(index, menuContainer)}
+      >
+        {t("Close Tabs to the Right")}
+      </button>
+      <button class="kef-ts-menu-item" onClick={() => closeAll(menuContainer)}>
+        {t("Close All")}
+      </button>
+    </Menu>,
+    menuContainer,
+  )
 }
 
 async function setActive(idx: number, updateLastActive: boolean = true) {
@@ -364,6 +434,49 @@ async function onDrop(
   } else {
     await setActive(activeIdx - 1, false)
   }
+}
+
+function unrender(container: HTMLElement) {
+  render(null, container)
+  container.remove()
+}
+
+async function close(index: number, container: HTMLElement) {
+  unrender(container)
+  const sidebarBlocks = await logseq.App.getStateFromStore("sidebar/blocks")
+  const realIndex = sidebarBlocks.length - 1 - index
+  sidebarBlocks.splice(realIndex, 1)
+  await logseq.App.setStateFromStore("sidebar/blocks", sidebarBlocks)
+  setTimeout(() => {
+    setActive(Math.max(0, activeIdx - 1))
+  }, 50)
+}
+
+async function closeOthers(index: number, container: HTMLElement) {
+  unrender(container)
+  const sidebarBlocks = await logseq.App.getStateFromStore("sidebar/blocks")
+  const realIndex = sidebarBlocks.length - 1 - index
+  const blocks = sidebarBlocks.splice(realIndex, 1)
+  await logseq.App.setStateFromStore("sidebar/blocks", blocks)
+  setTimeout(() => {
+    setActive(0)
+  }, 50)
+}
+
+async function closeRight(index: number, container: HTMLElement) {
+  unrender(container)
+  const sidebarBlocks = await logseq.App.getStateFromStore("sidebar/blocks")
+  const realIndex = sidebarBlocks.length - 1 - index
+  sidebarBlocks.splice(0, realIndex)
+  await logseq.App.setStateFromStore("sidebar/blocks", sidebarBlocks)
+  setTimeout(() => {
+    setActive(Math.min(activeIdx, index))
+  }, 50)
+}
+
+async function closeAll(container: HTMLElement) {
+  unrender(container)
+  logseq.App.clearRightSidebarBlocks({ close: true })
 }
 
 logseq.ready(main).catch(console.error)

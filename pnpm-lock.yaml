@@ -8,6 +8,9 @@ dependencies:
   '@logseq/libs':
     specifier: ^0.0.15
     version: 0.0.15
+  jsutils:
+    specifier: ^1.12.0
+    version: 1.12.0
   logseq-l10n:
     specifier: ^0.2.0
     version: 0.2.0(@logseq/libs@0.0.15)
@@ -17,6 +20,9 @@ dependencies:
   preact:
     specifier: ^10.14.1
     version: 10.14.1
+  reactutils:
+    specifier: ^5.13.0
+    version: 5.13.0(react@18.2.0)
 
 devDependencies:
   '@preact/preset-vite':
@@ -787,7 +793,6 @@ packages:
 
   /js-tokens@4.0.0:
     resolution: {integrity: sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==}
-    dev: true
 
   /jsesc@2.5.2:
     resolution: {integrity: sha512-OYu7XEzjkCQ3C5Ps3QIZsQfNpqoJyZZA99wd9aWd05NCtC5pWOkShK2mkL6HXQR6/Cy2lbNdPlZBpuQHXE63gA==}
@@ -800,6 +805,10 @@ packages:
     engines: {node: '>=6'}
     hasBin: true
     dev: true
+
+  /jsutils@1.12.0:
+    resolution: {integrity: sha512-pLxwlgmGBKqqCU/lhas2xdv/x4BrCJhQskl2tM3ICHQAQioBRnSGck0EJOYpWeQrAH5dXZVEqcuZpSW6jQzrrA==}
+    dev: false
 
   /kolorist@1.8.0:
     resolution: {integrity: sha512-Y+60/zizpJ3HRH8DCss+q95yr6145JXZo46OTpFvDZWLfRCE4qChOyk1b26nMaNpfHHgxagk9dXT5OP0Tfe+dQ==}
@@ -815,6 +824,13 @@ packages:
       '@logseq/libs': '>= 0.0.1-alpha.33'
     dependencies:
       '@logseq/libs': 0.0.15
+    dev: false
+
+  /loose-envify@1.4.0:
+    resolution: {integrity: sha512-lyuxPGr/Wfhrlem2CL/UcnUc1zcqKAImBDzukY7Y5F/yQiNdko6+fRLevlw1HgMySw7f611UIY408EtxRSoK3Q==}
+    hasBin: true
+    dependencies:
+      js-tokens: 4.0.0
     dev: false
 
   /lower-case@2.0.2:
@@ -897,6 +913,21 @@ packages:
   /process@0.11.10:
     resolution: {integrity: sha512-cdGef/drWFoydD1JsMzuFf8100nZl+GT+yacc2bEced5f9Rjk4z+WtFUTBu9PhOi9j/jfmBPu0mMEY4wIdAF8A==}
     engines: {node: '>= 0.6.0'}
+    dev: false
+
+  /react@18.2.0:
+    resolution: {integrity: sha512-/3IjMdb2L9QbBdWiW5e3P2/npwMBaU9mHCSCUzNln0ZCYbcfTsGbTJrU/kGemdH2IWmB2ioZ+zkxtmq6g09fGQ==}
+    engines: {node: '>=0.10.0'}
+    dependencies:
+      loose-envify: 1.4.0
+    dev: false
+
+  /reactutils@5.13.0(react@18.2.0):
+    resolution: {integrity: sha512-vuu2Q1uf9IDxWKa1g4nqLYEWVcL4tFP3DspigEZQtrAdHMWqjgZo1rKQ24Nr+Wn7KaxkdAY6Nu9HiWfkZSCeEg==}
+    peerDependencies:
+      react: '>=16.8.0'
+    dependencies:
+      react: 18.2.0
     dev: false
 
   /resolve@1.22.2:
