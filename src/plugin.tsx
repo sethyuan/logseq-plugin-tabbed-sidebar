@@ -347,8 +347,8 @@ async function setActive(idx: number, updateLastActive: boolean = true) {
 
   if (updateLastActive) {
     lastActiveIdx = activeIdx
-    activeIdx = idx
   }
+  activeIdx = idx
 
   const itemListLen = itemList.children.length
   for (let i = 0; i < itemListLen; i++) {
@@ -430,9 +430,9 @@ async function onDrop(
   } else if (sourceIndex < activeIdx) {
     await setActive(activeIdx - 1, false)
   } else if (targetIndex > activeIdx) {
-    await setActive(activeIdx + 1, false)
+    await setActive(activeIdx + (targetIndex - activeIdx), false)
   } else {
-    await setActive(activeIdx - 1, false)
+    await setActive(activeIdx - (activeIdx - targetIndex), false)
   }
 }
 
