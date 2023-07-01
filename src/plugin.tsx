@@ -11,6 +11,7 @@ let lastActiveIdx = 0
 let lastDeleteIdx = -1
 let reordering = false
 let drake: any = null
+let nextActiveIdx = -1
 
 async function main() {
   await setup({ builtinTranslations: { "zh-CN": zhCN } })
@@ -43,7 +44,10 @@ async function main() {
             isElement(node) &&
             (node.classList.contains("sidebar-item") || existent)
           ) {
-            refreshTabs(existent)
+            refreshTabs(
+              existent,
+              node.parentElement?.classList.contains("contents"),
+            )
             return
           }
         }
@@ -105,47 +109,35 @@ function provideStyles() {
       display: flex;
       align-items: center;
       justify-content: flex-start;
-      padding: 0 0.5em;
+      padding-left: 0.5em;
       font-size: 0.875em;
     }
-    #kef-ts-tabs > .flex {
+    .kef-ts-header {
       flex: 0 1 auto;
-      min-width: 0;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
       width: 150px;
       height: 30px;
       line-height: 30px;
       margin-right: 5px;
-      padding-right: 5px;
+      padding: 0 0.5em;
       background-color: var(--ls-primary-background-color);
       border-radius: 4px;
       cursor: pointer;
     }
-    #kef-ts-tabs > .flex:last-child {
-      margin-right: 0;
-    }
-    #kef-ts-tabs > .flex > div {
-      overflow: hidden;
-      white-space: nowrap;
-      justify-content: flex-start;
-    }
-    #kef-ts-tabs > .flex > div > a {
-      display: none;
-    }
-    #kef-ts-tabs a.close > svg {
-      width: 18px;
-      height: 18px;
-    }
     .kef-ts-active {
       background-color: var(--ls-selection-background-color) !important;
     }
-    #kef-ts-tabs .mt-1.ml-1 {
-      display: none;
-    }
     .kef-ts-block-title {
+      flex: 1 1 auto;
       margin-right: 4px;
+      overflow: hidden;
+      white-space: nowrap;
     }
-    .kef-ts-block-title + a.page-title {
-      display: inline-block;
+    .kef-ts-block-close {
+      flex: 0 0 auto;
+      font-family: 'tabler-icons';
     }
     .kef-ts-menu {
       position: fixed;
@@ -168,8 +160,17 @@ function provideStyles() {
     .kef-ts-menu-item:hover {
       background-color: var(--ls-primary-background-color);
     }
-    .sidebar-item .initial {
-      margin-left: -20px;
+    .sidebar-item > .flex > .flex > .flex > a {
+      display: none;
+    }
+    .sidebar-item a.close {
+      display: none;
+    }
+    .sidebar-item a.page-title {
+      display: none;
+    }
+    .sidebar-item .initial > .ml-2 {
+      margin-left: 0;
     }
     `,
   })
@@ -182,6 +183,7 @@ function renderTabs() {
 
   const container = parent.document.createElement("div")
   container.id = "kef-ts-tabs"
+  container.addEventListener("click", onTabCloseClick)
   container.addEventListener("click", onTabClick)
   container.addEventListener("contextmenu", onTabContextMenu)
   topBar.after(container)
@@ -193,39 +195,76 @@ function renderTabs() {
   drake.on("drop", onDrop)
 }
 
-function refreshTabs(hasExistent: boolean = false) {
+async function refreshTabs(
+  hasExistent: boolean = false,
+  isContents: boolean = false,
+) {
+  const sidebarBlocks = await logseq.App.getStateFromStore("sidebar/blocks")
+  if (
+    sidebarBlocks.some(([, , type]: [any, any, string]) => type === "blockRef")
+  ) {
+    await logseq.App.setStateFromStore(
+      "sidebar/blocks",
+      sidebarBlocks.map((item: [any, any, string]) => {
+        const [g, id, type] = item
+        if (type === "blockRef") {
+          return [g, id, "block"]
+        }
+        return item
+      }),
+    )
+    return
+  }
+
   const container = parent.document.getElementById("kef-ts-tabs")
   if (container == null) return
   const itemList = parent.document.querySelector(".sidebar-item-list")
   if (itemList == null) return
 
-  const newTabs = parent.document.querySelectorAll(
-    ".sidebar-item > .flex-col > .flex",
-  )
-  newTabs.forEach((tab) => {
+  const newCount = itemList.childElementCount - container.childElementCount
+  for (let i = 0; i < newCount; i++) {
+    const tab = parent.document.createElement("div")
+    tab.classList.add("kef-ts-header")
+    const title = parent.document.createElement("div")
+    title.classList.add("kef-ts-block-title")
+    const closeBtn = parent.document.createElement("button")
+    closeBtn.classList.add("kef-ts-block-close")
+    closeBtn.type = "button"
+    closeBtn.innerHTML = "&#xeb55;"
+    tab.append(title, closeBtn)
     container.prepend(tab)
-  })
+  }
 
   const deleteCount = container.childElementCount - itemList.childElementCount
   for (let i = 0; i < deleteCount; i++) {
     container.children[0].remove()
   }
 
-  if (
-    (newTabs.length === 1 ||
-      hasExistent ||
-      (newTabs.length > lastSidebarItemCount && lastSidebarItemCount > -1)) &&
+  if (nextActiveIdx > -1) {
+    await setActive(nextActiveIdx)
+    nextActiveIdx = -1
+  } else if (isContents) {
+    const index = sidebarBlocks.findIndex(
+      ([, , type]: [any, any, string]) => type === "contents",
+    )
+    if (index > -1) {
+      await setActive(sidebarBlocks.length - 1 - index)
+    }
+  } else if (
+    (newCount === 1 ||
+      (hasExistent && !isContents) ||
+      (newCount > lastSidebarItemCount && lastSidebarItemCount > -1)) &&
     !reordering
   ) {
-    setActive(container.childElementCount - 1)
-  } else if (newTabs.length > 1) {
-    setActive(activeIdx)
+    await setActive(container.childElementCount - 1)
+  } else if (newCount > 1) {
+    await setActive(activeIdx)
   } else if (lastDeleteIdx > activeIdx) {
-    setActive(
+    await setActive(
       activeIdx < container.childElementCount ? activeIdx : activeIdx - 1,
     )
   } else if (lastDeleteIdx === activeIdx) {
-    setActive(
+    await setActive(
       lastActiveIdx > lastDeleteIdx
         ? lastActiveIdx - 1
         : lastActiveIdx < container.childElementCount
@@ -233,10 +272,25 @@ function refreshTabs(hasExistent: boolean = false) {
         : lastActiveIdx - 1,
     )
   } else {
-    updateTabs(container)
+    await updateTabs(container)
   }
   lastDeleteIdx = -1
   reordering = false
+}
+
+async function onTabCloseClick(e: MouseEvent) {
+  const target = e.target as HTMLElement | null
+  if (target?.classList?.contains("kef-ts-block-close")) {
+    e.stopImmediatePropagation()
+    e.preventDefault()
+    const container = target.parentElement!.parentElement!
+    const index = Array.prototype.indexOf.call(
+      container.children,
+      target.parentElement!,
+    )
+    if (index < 0) return
+    await close(index)
+  }
 }
 
 async function onTabClick(e: MouseEvent) {
@@ -333,7 +387,7 @@ async function onTabContextMenu(e: MouseEvent) {
   )
 }
 
-async function setActive(idx: number, updateLastActive: boolean = true) {
+async function setActive(idx: number) {
   const container = parent.document.getElementById("kef-ts-tabs")
   if (container == null) return
   const itemList = parent.document.querySelector(".sidebar-item-list")
@@ -348,9 +402,7 @@ async function setActive(idx: number, updateLastActive: boolean = true) {
     }
   }
 
-  if (updateLastActive) {
-    lastActiveIdx = activeIdx
-  }
+  lastActiveIdx = activeIdx
   activeIdx = idx
 
   const itemListLen = itemList.children.length
@@ -371,27 +423,40 @@ async function updateTabs(container: HTMLElement) {
   await Promise.all(
     Array.prototype.map.call(container.children, async (tab, i) => {
       const [_graph, id, type] = sideBlocks[sideBlocks.length - 1 - i]
-      const titleContainer = tab.querySelector(".ml-1.font-medium")
-      if (titleContainer == null) return
-      let span = titleContainer.querySelector(".kef-ts-block-title")
-      if (span == null) {
-        span = parent.document.createElement("span")
-        span.classList.add("kef-ts-block-title")
-        titleContainer.prepend(span)
-      }
-
+      const span = tab.querySelector(".kef-ts-block-title")
       switch (type) {
         case "page": {
           const page = await logseq.Editor.getPage(id)
           if (page == null) return
-          span.innerHTML = page.properties?.icon ?? ""
+          const displayName = `${page.properties?.icon ?? ""} ${
+            page.originalName
+          }`
+          span.innerHTML = displayName
+          span.title = displayName
           break
         }
         case "block":
         case "blockRef": {
           const block = await logseq.Editor.getBlock(id)
           if (block == null) return
-          span.innerHTML = await parseContent(block.content)
+          const displayName = await parseContent(block.content)
+          span.innerHTML = displayName
+          span.title = displayName
+          break
+        }
+        case "help": {
+          span.innerHTML = t("Help")
+          span.title = ""
+          break
+        }
+        case "pageGraph": {
+          span.innerHTML = t("Page graph")
+          span.title = ""
+          break
+        }
+        case "contents": {
+          span.innerHTML = t("Contents")
+          span.title = ""
           break
         }
         default:
@@ -422,38 +487,36 @@ async function onDrop(
   const sourceItem = stateSidebarBlocks.splice(stateSourceIndex, 1)
   stateSidebarBlocks.splice(stateTargetIndex, 0, ...sourceItem)
   reordering = true
-  await logseq.App.setStateFromStore("sidebar/blocks", stateSidebarBlocks)
-
   if (
     (sourceIndex < activeIdx && targetIndex < activeIdx) ||
     (sourceIndex > activeIdx && targetIndex > activeIdx)
-  )
-    return
-  if (sourceIndex > activeIdx) {
-    await setActive(activeIdx + 1, false)
+  ) {
+    // Do nothing
+  } else if (sourceIndex > activeIdx) {
+    nextActiveIdx = activeIdx + 1
   } else if (sourceIndex < activeIdx) {
-    await setActive(activeIdx - 1, false)
+    nextActiveIdx = activeIdx - 1
   } else if (targetIndex > activeIdx) {
-    await setActive(activeIdx + (targetIndex - activeIdx), false)
+    nextActiveIdx = activeIdx + (targetIndex - activeIdx)
   } else {
-    await setActive(activeIdx - (activeIdx - targetIndex), false)
+    nextActiveIdx = activeIdx - (activeIdx - targetIndex)
   }
+  await logseq.App.setStateFromStore("sidebar/blocks", stateSidebarBlocks)
 }
 
-function unrender(container: HTMLElement) {
+function unrender(container?: HTMLElement) {
+  if (!container) return
   render(null, container)
   container.remove()
 }
 
-async function close(index: number, container: HTMLElement) {
+async function close(index: number, container?: HTMLElement) {
   unrender(container)
   const sidebarBlocks = await logseq.App.getStateFromStore("sidebar/blocks")
   const realIndex = sidebarBlocks.length - 1 - index
   sidebarBlocks.splice(realIndex, 1)
+  nextActiveIdx = Math.max(0, index > activeIdx ? activeIdx : activeIdx - 1)
   await logseq.App.setStateFromStore("sidebar/blocks", sidebarBlocks)
-  setTimeout(() => {
-    setActive(Math.max(0, activeIdx - 1))
-  }, 50)
 }
 
 async function closeOthers(index: number, container: HTMLElement) {
@@ -461,10 +524,8 @@ async function closeOthers(index: number, container: HTMLElement) {
   const sidebarBlocks = await logseq.App.getStateFromStore("sidebar/blocks")
   const realIndex = sidebarBlocks.length - 1 - index
   const blocks = sidebarBlocks.splice(realIndex, 1)
+  nextActiveIdx = 0
   await logseq.App.setStateFromStore("sidebar/blocks", blocks)
-  setTimeout(() => {
-    setActive(0)
-  }, 50)
 }
 
 async function closeRight(index: number, container: HTMLElement) {
@@ -472,10 +533,8 @@ async function closeRight(index: number, container: HTMLElement) {
   const sidebarBlocks = await logseq.App.getStateFromStore("sidebar/blocks")
   const realIndex = sidebarBlocks.length - 1 - index
   sidebarBlocks.splice(0, realIndex)
+  nextActiveIdx = Math.min(activeIdx, index)
   await logseq.App.setStateFromStore("sidebar/blocks", sidebarBlocks)
-  setTimeout(() => {
-    setActive(Math.min(activeIdx, index))
-  }, 50)
 }
 
 async function closeAll(container: HTMLElement) {
