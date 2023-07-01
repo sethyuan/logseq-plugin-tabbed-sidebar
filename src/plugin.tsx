@@ -168,6 +168,9 @@ function provideStyles() {
     .kef-ts-menu-item:hover {
       background-color: var(--ls-primary-background-color);
     }
+    .sidebar-item .initial {
+      margin-left: -20px;
+    }
     `,
   })
 }
@@ -384,7 +387,8 @@ async function updateTabs(container: HTMLElement) {
           span.innerHTML = page.properties?.icon ?? ""
           break
         }
-        case "block": {
+        case "block":
+        case "blockRef": {
           const block = await logseq.Editor.getBlock(id)
           if (block == null) return
           span.innerHTML = await parseContent(block.content)
