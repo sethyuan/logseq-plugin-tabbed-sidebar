@@ -487,6 +487,7 @@ async function onDrop(
   const sourceItem = stateSidebarBlocks.splice(stateSourceIndex, 1)
   stateSidebarBlocks.splice(stateTargetIndex, 0, ...sourceItem)
   reordering = true
+  logseq.App.setStateFromStore("sidebar/blocks", stateSidebarBlocks)
   if (
     (sourceIndex < activeIdx && targetIndex < activeIdx) ||
     (sourceIndex > activeIdx && targetIndex > activeIdx)
@@ -494,14 +495,17 @@ async function onDrop(
     // Do nothing
   } else if (sourceIndex > activeIdx) {
     nextActiveIdx = activeIdx + 1
+    setActive(nextActiveIdx)
   } else if (sourceIndex < activeIdx) {
     nextActiveIdx = activeIdx - 1
+    setActive(nextActiveIdx)
   } else if (targetIndex > activeIdx) {
     nextActiveIdx = activeIdx + (targetIndex - activeIdx)
+    setActive(nextActiveIdx)
   } else {
     nextActiveIdx = activeIdx - (activeIdx - targetIndex)
+    setActive(nextActiveIdx)
   }
-  await logseq.App.setStateFromStore("sidebar/blocks", stateSidebarBlocks)
 }
 
 function unrender(container?: HTMLElement) {
