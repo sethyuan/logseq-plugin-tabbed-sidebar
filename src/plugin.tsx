@@ -420,6 +420,9 @@ async function setActive(idx: number) {
 
 async function updateTabs(container: HTMLElement) {
   const sideBlocks = await logseq.App.getStateFromStore("sidebar/blocks")
+  if (sideBlocks.length === 0) {
+    sideBlocks.push(["", "contents", "contents"])
+  }
   await Promise.all(
     Array.prototype.map.call(container.children, async (tab, i) => {
       const [_graph, id, type] = sideBlocks[sideBlocks.length - 1 - i]
