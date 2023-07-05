@@ -316,28 +316,9 @@ async function onTabClick(e: MouseEvent) {
   e.stopImmediatePropagation()
 
   if (e.shiftKey) {
-    const sideBlocks = await logseq.App.getStateFromStore("sidebar/blocks")
-    const [_graph, id, type] = sideBlocks[sideBlocks.length - 1 - index]
-    switch (type) {
-      case "page": {
-        const page = await logseq.Editor.getPage(id)
-        ;(logseq.Editor.scrollToBlockInPage as any)(page!.name)
-        break
-      }
-      case "block": {
-        const block = await logseq.Editor.getBlock(id)
-        ;(logseq.Editor.scrollToBlockInPage as any)(block!.uuid)
-        break
-      }
-      case "contents": {
-        ;(logseq.Editor.scrollToBlockInPage as any)("contents")
-        break
-      }
-      default:
-        break
-    }
+    await openTab(index)
   } else {
-    setActive(index)
+    await setActive(index)
   }
 }
 
@@ -361,6 +342,12 @@ async function onTabContextMenu(e: MouseEvent) {
   const x = Math.min(e.clientX, parent.innerWidth - 168)
   render(
     <Menu x={x} y={e.clientY} onClose={() => unrender(menuContainer)}>
+      <button
+        class="kef-ts-menu-item"
+        onClick={() => open(index, menuContainer)}
+      >
+        {t("Open")}
+      </button>
       <button
         class="kef-ts-menu-item"
         onClick={() => close(index, menuContainer)}
@@ -515,6 +502,34 @@ function unrender(container?: HTMLElement) {
   if (!container) return
   render(null, container)
   container.remove()
+}
+
+async function openTab(index: number) {
+  const sideBlocks = await logseq.App.getStateFromStore("sidebar/blocks")
+  const [_graph, id, type] = sideBlocks[sideBlocks.length - 1 - index]
+  switch (type) {
+    case "page": {
+      const page = await logseq.Editor.getPage(id)
+      ;(logseq.Editor.scrollToBlockInPage as any)(page!.name)
+      break
+    }
+    case "block": {
+      const block = await logseq.Editor.getBlock(id)
+      ;(logseq.Editor.scrollToBlockInPage as any)(block!.uuid)
+      break
+    }
+    case "contents": {
+      ;(logseq.Editor.scrollToBlockInPage as any)("contents")
+      break
+    }
+    default:
+      break
+  }
+}
+
+async function open(index: number, container?: HTMLElement) {
+  unrender(container)
+  await openTab(index)
 }
 
 async function close(index: number, container?: HTMLElement) {
