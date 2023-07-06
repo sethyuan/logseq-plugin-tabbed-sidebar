@@ -289,6 +289,7 @@ async function onTabCloseClick(e: MouseEvent) {
       target.parentElement!,
     )
     if (index < 0) return
+    lastDeleteIdx = index
     await close(index)
   }
 }
@@ -304,14 +305,6 @@ async function onTabClick(e: MouseEvent) {
   const container = el.parentElement!
   const index = Array.prototype.indexOf.call(container.children, el)
   if (index < 0) return
-
-  if (
-    (e.target as HTMLElement).nodeName === "A" &&
-    (e.target as HTMLElement).classList?.contains("close")
-  ) {
-    lastDeleteIdx = index
-    return
-  }
 
   e.stopImmediatePropagation()
 
@@ -536,6 +529,10 @@ async function close(index: number, container?: HTMLElement) {
   unrender(container)
   const sidebarBlocks = await logseq.App.getStateFromStore("sidebar/blocks")
   const realIndex = sidebarBlocks.length - 1 - index
+  if (realIndex < 0) {
+    await logseq.App.invokeExternalCommand("logseq.ui/toggle-right-sidebar")
+    return
+  }
   sidebarBlocks.splice(realIndex, 1)
   nextActiveIdx = Math.max(0, index > activeIdx ? activeIdx : activeIdx - 1)
   await logseq.App.setStateFromStore("sidebar/blocks", sidebarBlocks)
