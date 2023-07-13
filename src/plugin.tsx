@@ -30,7 +30,7 @@ async function main() {
         renderTabs()
       } else {
         const items = await logseq.App.getStateFromStore("sidebar/blocks")
-        ;[, sidebarItemBeforeClosed] = items[0]
+        ;[, sidebarItemBeforeClosed] = items[0] ?? []
         lastSidebarItemCount = (
           await logseq.App.getStateFromStore("sidebar/blocks")
         ).length
@@ -247,7 +247,7 @@ async function refreshTabs(
     container.children[0].remove()
   }
 
-  const [, topItemId] = sidebarBlocks[0]
+  const [, topItemId] = sidebarBlocks[0] ?? []
   if (nextActiveIdx > -1) {
     await setActive(nextActiveIdx)
     nextActiveIdx = -1
