@@ -5,7 +5,9 @@ import Menu from "./comps/Menu"
 import { isElement, parseContent } from "./libs/utils"
 import zhCN from "./translations/zh-CN.json"
 
+let todayPageId = 0
 let lastSidebarItemCount = -1
+let sidebarItemBeforeClosed: string | number = ""
 let activeIdx = 0
 let lastActiveIdx = 0
 let lastDeleteIdx = -1
@@ -22,8 +24,13 @@ async function main() {
   const sidebarVisibleOffHook = logseq.App.onSidebarVisibleChanged(
     async ({ visible }) => {
       if (visible) {
+        const todayPageName = await logseq.App.getStateFromStore("today")
+        const today = await logseq.Editor.getPage(todayPageName)
+        todayPageId = today!.id
         renderTabs()
       } else {
+        const items = await logseq.App.getStateFromStore("sidebar/blocks")
+        ;[, sidebarItemBeforeClosed] = items[0]
         lastSidebarItemCount = (
           await logseq.App.getStateFromStore("sidebar/blocks")
         ).length
@@ -240,6 +247,7 @@ async function refreshTabs(
     container.children[0].remove()
   }
 
+  const [, topItemId] = sidebarBlocks[0]
   if (nextActiveIdx > -1) {
     await setActive(nextActiveIdx)
     nextActiveIdx = -1
@@ -253,6 +261,8 @@ async function refreshTabs(
   } else if (
     (newCount === 1 ||
       (hasExistent && !isContents) ||
+      sidebarItemBeforeClosed !== topItemId ||
+      topItemId === todayPageId ||
       (newCount > lastSidebarItemCount && lastSidebarItemCount > -1)) &&
     !reordering
   ) {
