@@ -24,10 +24,10 @@ async function main() {
   const sidebarVisibleOffHook = logseq.App.onSidebarVisibleChanged(
     async ({ visible }) => {
       if (visible) {
+        renderTabs()
         const todayPageName = await logseq.App.getStateFromStore("today")
         const today = await logseq.Editor.getPage(todayPageName)
         todayPageId = today!.id
-        renderTabs()
       } else {
         const items = await logseq.App.getStateFromStore("sidebar/blocks")
         ;[, sidebarItemBeforeClosed] = items[0] ?? []
