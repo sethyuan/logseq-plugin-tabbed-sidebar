@@ -210,16 +210,21 @@ async function refreshTabs(
   if (
     sidebarBlocks.some(([, , type]: [any, any, string]) => type === "blockRef")
   ) {
-    await logseq.App.setStateFromStore(
-      "sidebar/blocks",
-      sidebarBlocks.map((item: [any, any, string]) => {
+    const blocks = await Promise.all(
+      sidebarBlocks.map(async (item: [any, any, string]) => {
         const [g, id, type] = item
         if (type === "blockRef") {
-          return [g, id, "block"]
+          if (typeof id === "string") {
+            const blockId = (await logseq.Editor.getBlock(id))!.id
+            return [g, blockId, "block"]
+          } else {
+            return [g, id, "block"]
+          }
         }
         return item
       }),
     )
+    await logseq.App.setStateFromStore("sidebar/blocks", blocks)
     return
   }
 
