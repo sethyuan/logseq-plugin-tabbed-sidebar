@@ -214,11 +214,13 @@ async function refreshTabs(
       sidebarBlocks.map(async (item: [any, any, string]) => {
         const [g, id, type] = item
         if (type === "blockRef") {
-          if (typeof id === "string") {
-            const blockId = (await logseq.Editor.getBlock(id))!.id
-            return [g, blockId, "block"]
+          const entity =
+            (await logseq.Editor.getBlock(id)) ??
+            (await logseq.Editor.getPage(id))!
+          if (entity.name) {
+            return [g, entity.id, "page"]
           } else {
-            return [g, id, "block"]
+            return [g, entity.id, "block"]
           }
         }
         return item
@@ -433,8 +435,7 @@ async function updateTabs(container: HTMLElement) {
           span.title = displayName
           break
         }
-        case "block":
-        case "blockRef": {
+        case "block": {
           const block = await logseq.Editor.getBlock(id)
           if (block == null) return
           const displayName = await parseContent(block.content)
