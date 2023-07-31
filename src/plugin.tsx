@@ -438,7 +438,13 @@ async function updateTabs(container: HTMLElement) {
         case "block": {
           const block = await logseq.Editor.getBlock(id)
           if (block == null) return
-          const displayName = await parseContent(block.content)
+          let displayName
+          if (block["preBlock?"]) {
+            const page = (await logseq.Editor.getPage(block.page.id))!
+            displayName = `${page.properties?.icon ?? ""} ${page.originalName}`
+          } else {
+            displayName = await parseContent(block.content)
+          }
           span.innerHTML = displayName
           span.title = displayName
           break
