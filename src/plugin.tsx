@@ -5,6 +5,9 @@ import Menu from "./comps/Menu"
 import { isElement, parseContent } from "./libs/utils"
 import zhCN from "./translations/zh-CN.json"
 
+const TOOLTIP_WIDTH = 300
+const DECORATIVE_W = -4
+
 let todayPageId = 0
 let lastSidebarItemCount = -1
 let sidebarItemBeforeClosed: string | number = ""
@@ -118,6 +121,21 @@ function provideStyles() {
       justify-content: flex-start;
       padding-left: 0.5em;
       font-size: 0.875em;
+      position: relative;
+    }
+    #kef-ts-tooltip {
+      display: none;
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0;
+      width: 300px;
+      background-color: var(--ls-primary-background-color);
+      z-index: var(--ls-z-index-level-2);
+      border-radius: 8px;
+      padding: 0.75em 1em;
+      box-shadow: 0px 2px 14px 0px var(--ls-block-bullet-color);
+      line-height: 1.6;
+      transition: translate 100ms linear;
     }
     .kef-ts-header {
       flex: 0 1 auto;
@@ -203,6 +221,12 @@ function renderTabs() {
   container.addEventListener("click", onTabClick)
   container.addEventListener("dblclick", onTabDoubleClick)
   container.addEventListener("contextmenu", onTabContextMenu)
+  container.addEventListener("mouseleave", onTabMouseLeave)
+
+  const tooltip = parent.document.createElement("div")
+  tooltip.id = "kef-ts-tooltip"
+  container.append(tooltip)
+
   topBar.after(container)
 
   drake = (parent as any).dragula([container], {
@@ -246,8 +270,9 @@ async function refreshTabs(
     ".sidebar-item-list .sidebar-item",
   )
   if (itemList == null) return
+  const tabsCount = container.childElementCount - 1
 
-  const newCount = itemList.length - container.childElementCount
+  const newCount = itemList.length - tabsCount
   for (let i = 0; i < newCount; i++) {
     const tab = parent.document.createElement("div")
     tab.classList.add("kef-ts-header")
@@ -258,10 +283,11 @@ async function refreshTabs(
     closeBtn.type = "button"
     closeBtn.innerHTML = "&#xeb55;"
     tab.append(title, closeBtn)
+    tab.addEventListener("mouseenter", onTabMouseEnter)
     container.prepend(tab)
   }
 
-  const deleteCount = container.childElementCount - itemList.length
+  const deleteCount = tabsCount - itemList.length
   for (let i = 0; i < deleteCount; i++) {
     container.children[0].remove()
   }
@@ -285,18 +311,16 @@ async function refreshTabs(
       (newCount > lastSidebarItemCount && lastSidebarItemCount > -1)) &&
     !reordering
   ) {
-    await setActive(container.childElementCount - 1)
+    await setActive(container.childElementCount - 1 - 1)
   } else if (newCount > 1) {
     await setActive(activeIdx)
   } else if (lastDeleteIdx > activeIdx) {
-    await setActive(
-      activeIdx < container.childElementCount ? activeIdx : activeIdx - 1,
-    )
+    await setActive(activeIdx < tabsCount ? activeIdx : activeIdx - 1)
   } else if (lastDeleteIdx === activeIdx) {
     await setActive(
       lastActiveIdx > lastDeleteIdx
         ? lastActiveIdx - 1
-        : lastActiveIdx < container.childElementCount
+        : lastActiveIdx < tabsCount
         ? lastActiveIdx
         : lastActiveIdx - 1,
     )
@@ -413,6 +437,28 @@ async function onTabContextMenu(e: MouseEvent) {
   )
 }
 
+function onTabMouseEnter(e: MouseEvent) {
+  const container = parent.document.getElementById("kef-ts-tabs")!
+  const tooltip = parent.document.getElementById("kef-ts-tooltip")!
+  const tab = e.target as HTMLElement
+  const tabTitle = tab.querySelector(".kef-ts-block-title")!
+  const tabRect = tab.getBoundingClientRect()
+
+  if (tabRect.left + DECORATIVE_W + TOOLTIP_WIDTH > parent.innerWidth) {
+    tooltip.style.translate = `${container.clientWidth - TOOLTIP_WIDTH}px`
+  } else {
+    tooltip.style.translate = `${tab.offsetLeft + DECORATIVE_W}px`
+  }
+
+  tooltip.innerHTML = tabTitle.innerHTML
+  tooltip.style.display = "block"
+}
+
+function onTabMouseLeave(e: MouseEvent) {
+  const tooltip = parent.document.getElementById("kef-ts-tooltip")!
+  tooltip.style.display = ""
+}
+
 async function setActive(idx: number) {
   const container = parent.document.getElementById("kef-ts-tabs")
   if (container == null) return
@@ -420,8 +466,9 @@ async function setActive(idx: number) {
     ".sidebar-item-list .sidebar-item",
   )
   if (itemList == null) return
+  const tabsCount = container.childElementCount - 1
 
-  for (let i = 0; i < container.children.length; i++) {
+  for (let i = 0; i < tabsCount; i++) {
     const tab = container.children[i] as HTMLElement
     if (i === idx) {
       tab.classList.add("kef-ts-active")
@@ -451,8 +498,9 @@ async function updateTabs(container: HTMLElement) {
   if (sideBlocks.length === 0) {
     sideBlocks.push(["", "contents", "contents"])
   }
+  const tabs = container.querySelectorAll(".kef-ts-header")
   await Promise.all(
-    Array.prototype.map.call(container.children, async (tab, i) => {
+    Array.prototype.map.call(tabs, async (tab, i) => {
       const [_graph, id, type] = sideBlocks[sideBlocks.length - 1 - i]
       const span = tab.querySelector(".kef-ts-block-title")
       switch (type) {
@@ -463,7 +511,6 @@ async function updateTabs(container: HTMLElement) {
             page.originalName
           }`
           span.innerHTML = displayName
-          span.title = displayName
           break
         }
         case "block": {
@@ -477,22 +524,18 @@ async function updateTabs(container: HTMLElement) {
             displayName = await parseContent(block.content)
           }
           span.innerHTML = displayName
-          span.title = displayName
           break
         }
         case "help": {
           span.innerHTML = t("Help")
-          span.title = ""
           break
         }
         case "pageGraph": {
           span.innerHTML = t("Page graph")
-          span.title = ""
           break
         }
         case "contents": {
           span.innerHTML = t("Contents")
-          span.title = ""
           break
         }
         default:
