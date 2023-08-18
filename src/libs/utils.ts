@@ -1,8 +1,13 @@
 import { parse } from "./marked-renderer"
 
+const TASK_REGEX = /^(?:TODO|LATER|DOING|NOW|DONE|CANCELED|WAITING) /
+
 export async function parseContent(content: string) {
   // Use only the first line.
   content = content.match(/.*/)![0]
+
+  // Remove task markers.
+  content = content.replace(TASK_REGEX, "")
 
   // Remove macro renderers.
   content = content.replace(/ \{\{renderer (?:\}[^\}]|[^\}])+\}\}/g, "")

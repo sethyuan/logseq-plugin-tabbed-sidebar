@@ -201,6 +201,7 @@ function renderTabs() {
   container.id = "kef-ts-tabs"
   container.addEventListener("click", onTabCloseClick)
   container.addEventListener("click", onTabClick)
+  container.addEventListener("dblclick", onTabDoubleClick)
   container.addEventListener("contextmenu", onTabContextMenu)
   topBar.after(container)
 
@@ -341,6 +342,23 @@ async function onTabClick(e: MouseEvent) {
   } else {
     await setActive(index)
   }
+}
+
+async function onTabDoubleClick(e: MouseEvent) {
+  e.preventDefault()
+
+  const path = e.composedPath()
+  const el = path.find(
+    (x) => (x as Node).parentElement?.id === "kef-ts-tabs",
+  ) as HTMLElement
+  if (el == null) return
+  const container = el.parentElement!
+  const index = Array.prototype.indexOf.call(container.children, el)
+  if (index < 0) return
+
+  e.stopImmediatePropagation()
+
+  await openTab(index)
 }
 
 async function onTabContextMenu(e: MouseEvent) {
