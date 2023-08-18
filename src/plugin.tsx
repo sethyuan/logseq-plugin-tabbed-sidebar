@@ -167,6 +167,15 @@ function provideStyles() {
     .kef-ts-menu-item:hover {
       background-color: var(--ls-primary-background-color);
     }
+    .sidebar-item-list {
+      margin-top: 0 !important;
+    }
+    .sidebar-drop-indicator {
+      display: none !important;
+    }
+    .sidebar-item-header {
+      display: none !important;
+    }
     .sidebar-item > .flex > .flex > .flex > a {
       display: none;
     }
@@ -232,10 +241,12 @@ async function refreshTabs(
 
   const container = parent.document.getElementById("kef-ts-tabs")
   if (container == null) return
-  const itemList = parent.document.querySelector(".sidebar-item-list")
+  const itemList = parent.document.querySelectorAll(
+    ".sidebar-item-list .sidebar-item",
+  )
   if (itemList == null) return
 
-  const newCount = itemList.childElementCount - container.childElementCount
+  const newCount = itemList.length - container.childElementCount
   for (let i = 0; i < newCount; i++) {
     const tab = parent.document.createElement("div")
     tab.classList.add("kef-ts-header")
@@ -249,7 +260,7 @@ async function refreshTabs(
     container.prepend(tab)
   }
 
-  const deleteCount = container.childElementCount - itemList.childElementCount
+  const deleteCount = container.childElementCount - itemList.length
   for (let i = 0; i < deleteCount; i++) {
     container.children[0].remove()
   }
@@ -387,7 +398,9 @@ async function onTabContextMenu(e: MouseEvent) {
 async function setActive(idx: number) {
   const container = parent.document.getElementById("kef-ts-tabs")
   if (container == null) return
-  const itemList = parent.document.querySelector(".sidebar-item-list")
+  const itemList = parent.document.querySelectorAll(
+    ".sidebar-item-list .sidebar-item",
+  )
   if (itemList == null) return
 
   for (let i = 0; i < container.children.length; i++) {
@@ -402,9 +415,9 @@ async function setActive(idx: number) {
   lastActiveIdx = activeIdx
   activeIdx = idx
 
-  const itemListLen = itemList.children.length
+  const itemListLen = itemList.length
   for (let i = 0; i < itemListLen; i++) {
-    const item = itemList.children[itemListLen - 1 - i] as HTMLElement
+    const item = itemList[itemListLen - 1 - i] as HTMLElement
     if (i === idx) {
       item.style.display = ""
     } else {
