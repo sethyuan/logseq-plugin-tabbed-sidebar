@@ -146,22 +146,26 @@ function provideStyles() {
       height: 30px;
       line-height: 30px;
       margin-right: 5px;
-      padding: 0 0.5em;
+      padding: 0 0.25em;
       background-color: var(--ls-primary-background-color);
       border-radius: 4px;
       cursor: pointer;
+      border-right: 1px solid var(--ls-border-color);
+    }
+    .kef-ts-header:hover {
+      background-color: var(--ls-secondary-background-color);
     }
     .kef-ts-active {
       background-color: var(--ls-selection-background-color) !important;
     }
     .kef-ts-block-title {
-      flex: 1 1 auto;
+      flex: 1 0 20px;
       margin-right: 4px;
       overflow: hidden;
       white-space: nowrap;
     }
     .kef-ts-block-close {
-      flex: 0 0 auto;
+      flex: 0 1 0%;
       font-family: 'tabler-icons';
     }
     .kef-ts-menu {
@@ -186,7 +190,7 @@ function provideStyles() {
       background-color: var(--ls-primary-background-color);
     }
     .sidebar-item-list {
-      margin-top: 0 !important;
+      margin-top: 4px !important;
     }
     .sidebar-drop-indicator {
       display: none !important;
