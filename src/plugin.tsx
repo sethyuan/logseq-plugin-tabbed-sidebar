@@ -1,8 +1,15 @@
 import "@logseq/libs"
+import { IAsyncStorage } from "@logseq/libs/dist/modules/LSPlugin.Storage"
 import { setup, t } from "logseq-l10n"
 import { render } from "preact"
 import Menu from "./comps/Menu"
-import { isElement, parseContent } from "./libs/utils"
+import {
+  getBlock,
+  isElement,
+  parseContent,
+  readPinData,
+  writePinData,
+} from "./libs/utils"
 import zhCN from "./translations/zh-CN.json"
 
 const TOOLTIP_WIDTH = 300
@@ -18,11 +25,15 @@ let reordering = false
 let drake: any = null
 let nextActiveIdx = -1
 
+let storage: IAsyncStorage
+
 async function main() {
   await setup({ builtinTranslations: { "zh-CN": zhCN } })
 
   injectDeps()
   provideStyles()
+
+  storage = logseq.Assets.makeSandboxStorage()
 
   const sidebarVisibleOffHook = logseq.App.onSidebarVisibleChanged(
     async ({ visible }) => {
@@ -167,6 +178,11 @@ function provideStyles() {
     .kef-ts-block-close {
       flex: 0 1 0%;
       font-family: 'tabler-icons';
+    }
+    .kef-ts-pinned {
+      width: 28px;
+      padding-left: 7px;
+      letter-spacing: 10px;
     }
     .kef-ts-menu {
       position: fixed;
@@ -407,6 +423,8 @@ async function onTabContextMenu(e: MouseEvent) {
   parent.document.body.append(menuContainer)
   // ensure context menu stays inside the viewport.
   const x = Math.min(e.clientX, parent.innerWidth - 168)
+  const isPinned = el.classList.contains("kef-ts-pinned")
+
   render(
     <Menu x={x} y={e.clientY} onClose={() => unrender(menuContainer)}>
       <button
@@ -417,25 +435,40 @@ async function onTabContextMenu(e: MouseEvent) {
       </button>
       <button
         class="kef-ts-menu-item"
-        onClick={() => close(index, menuContainer)}
+        onClick={() =>
+          isPinned ? unpin(index, menuContainer) : pin(index, menuContainer)
+        }
       >
-        {t("Close")}
+        {isPinned ? t("Unpin") : t("Pin")}
       </button>
-      <button
-        class="kef-ts-menu-item"
-        onClick={() => closeOthers(index, menuContainer)}
-      >
-        {t("Close Others")}
-      </button>
-      <button
-        class="kef-ts-menu-item"
-        onClick={() => closeRight(index, menuContainer)}
-      >
-        {t("Close Tabs to the Right")}
-      </button>
-      <button class="kef-ts-menu-item" onClick={() => closeAll(menuContainer)}>
-        {t("Close All")}
-      </button>
+      {!isPinned && (
+        <>
+          <button
+            class="kef-ts-menu-item"
+            onClick={() => close(index, menuContainer)}
+          >
+            {t("Close")}
+          </button>
+          <button
+            class="kef-ts-menu-item"
+            onClick={() => closeOthers(index, menuContainer)}
+          >
+            {t("Close Others")}
+          </button>
+          <button
+            class="kef-ts-menu-item"
+            onClick={() => closeRight(index, menuContainer)}
+          >
+            {t("Close Tabs to the Right")}
+          </button>
+          <button
+            class="kef-ts-menu-item"
+            onClick={() => closeAll(menuContainer)}
+          >
+            {t("Close All")}
+          </button>
+        </>
+      )}
     </Menu>,
     menuContainer,
   )
@@ -502,11 +535,19 @@ async function updateTabs(container: HTMLElement) {
   if (sideBlocks.length === 0) {
     sideBlocks.push(["", "contents", "contents"])
   }
+  const pinData = await readPinData(storage)
   const tabs = container.querySelectorAll(".kef-ts-header")
+
   await Promise.all(
-    Array.prototype.map.call(tabs, async (tab, i) => {
+    Array.prototype.map.call(tabs, async (tab: HTMLElement, i) => {
+      if (i < pinData.length) {
+        tab.classList.add("kef-ts-pinned")
+      } else {
+        tab.classList.remove("kef-ts-pinned")
+      }
+
       const [_graph, id, type] = sideBlocks[sideBlocks.length - 1 - i]
-      const span = tab.querySelector(".kef-ts-block-title")
+      const span = tab.querySelector(".kef-ts-block-title")!
       switch (type) {
         case "page": {
           const page = await logseq.Editor.getPage(id)
@@ -625,6 +666,24 @@ async function open(index: number, container?: HTMLElement) {
   await openTab(index)
 }
 
+async function pin(index: number, container?: HTMLElement) {
+  unrender(container)
+
+  const block = await getBlock(index)
+  if (block == null) return
+
+  const pinData = await readPinData(storage)
+  pinData.push(block.uuid)
+  await writePinData(pinData, storage)
+
+  await moveTab(index, pinData.length - 1)
+}
+
+async function unpin(index: number, container?: HTMLElement) {
+  unrender(container)
+  // TODO
+}
+
 async function close(index: number, container?: HTMLElement) {
   unrender(container)
   const sidebarBlocks = await logseq.App.getStateFromStore("sidebar/blocks")
@@ -659,6 +718,23 @@ async function closeRight(index: number, container: HTMLElement) {
 async function closeAll(container: HTMLElement) {
   unrender(container)
   logseq.App.clearRightSidebarBlocks({ close: true })
+}
+
+async function moveTab(from: number, to: number) {
+  const stateSidebarBlocks = await logseq.App.getStateFromStore(
+    "sidebar/blocks",
+  )
+
+  const stateSourceIndex = stateSidebarBlocks.length - 1 - from
+  const stateTargetIndex = stateSidebarBlocks.length - 1 - to
+  const sourceItem = stateSidebarBlocks.splice(stateSourceIndex, 1)
+  stateSidebarBlocks.splice(stateTargetIndex, 0, ...sourceItem)
+
+  reordering = true
+
+  logseq.App.setStateFromStore("sidebar/blocks", stateSidebarBlocks)
+
+  setTimeout(() => setActive(to), 16)
 }
 
 logseq.ready(main).catch(console.error)

@@ -1,6 +1,9 @@
+import { IAsyncStorage } from "@logseq/libs/dist/modules/LSPlugin.Storage"
 import { parse } from "./marked-renderer"
 
 const TASK_REGEX = /^(?:TODO|LATER|DOING|NOW|DONE|CANCELED|WAITING) /
+
+const PIN_DATA_KEY = "pin.json"
 
 export async function parseContent(content: string) {
   // Use only the first line.
@@ -47,4 +50,38 @@ export async function parseContent(content: string) {
 
 export function isElement(node: Node): node is HTMLElement {
   return node.nodeType === 1
+}
+
+export async function readPinData(storage: IAsyncStorage): Promise<string[]> {
+  try {
+    if (!(await storage.hasItem(PIN_DATA_KEY))) return []
+    const pinStr = (await storage.getItem(PIN_DATA_KEY))!
+    return JSON.parse(pinStr)
+  } catch (err) {
+    console.error(err)
+    return []
+  }
+}
+
+export async function writePinData(data: string[], storage: IAsyncStorage) {
+  await storage.setItem(PIN_DATA_KEY, JSON.stringify(data))
+}
+
+export async function getBlock(index: number) {
+  const sideBlocks = await logseq.App.getStateFromStore("sidebar/blocks")
+  const [_graph, id, type] = sideBlocks[sideBlocks.length - 1 - index]
+
+  switch (type) {
+    case "page": {
+      return await logseq.Editor.getPage(id)
+    }
+    case "block": {
+      return await logseq.Editor.getBlock(id)
+    }
+    case "contents": {
+      return await logseq.Editor.getPage("contents")
+    }
+    default:
+      return null
+  }
 }
