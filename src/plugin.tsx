@@ -267,7 +267,7 @@ async function refreshTabs(
   const container = parent.document.getElementById("kef-ts-tabs")
   if (container == null) return
   const itemList = parent.document.querySelectorAll(
-    ".sidebar-item-list .sidebar-item",
+    ".sidebar-item-list .sidebar-item.content",
   )
   if (itemList == null) return
   const tabsCount = container.childElementCount - 1
@@ -463,7 +463,7 @@ async function setActive(idx: number) {
   const container = parent.document.getElementById("kef-ts-tabs")
   if (container == null) return
   const itemList = parent.document.querySelectorAll(
-    ".sidebar-item-list .sidebar-item",
+    ".sidebar-item-list .sidebar-item.content",
   )
   if (itemList == null) return
   const tabsCount = container.childElementCount - 1
