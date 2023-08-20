@@ -1,10 +1,12 @@
 import "@logseq/libs"
+import { BlockEntity, PageEntity } from "@logseq/libs/dist/LSPlugin.user"
 import { IAsyncStorage } from "@logseq/libs/dist/modules/LSPlugin.Storage"
 import { setup, t } from "logseq-l10n"
 import { render } from "preact"
 import Menu from "./comps/Menu"
 import {
   getBlock,
+  getBlocksFromUuids,
   isElement,
   parseContent,
   readPinData,
@@ -26,6 +28,7 @@ let drake: any = null
 let nextActiveIdx = -1
 
 let storage: IAsyncStorage
+let graphUrl: string
 
 async function main() {
   await setup({ builtinTranslations: { "zh-CN": zhCN } })
@@ -34,6 +37,7 @@ async function main() {
   provideStyles()
 
   storage = logseq.Assets.makeSandboxStorage()
+  graphUrl = (await logseq.App.getCurrentGraph())!.url
 
   const sidebarVisibleOffHook = logseq.App.onSidebarVisibleChanged(
     async ({ visible }) => {
@@ -181,7 +185,6 @@ function provideStyles() {
     }
     .kef-ts-pinned {
       width: 28px;
-      padding-left: 7px;
       letter-spacing: 10px;
     }
     .kef-ts-menu {
@@ -261,6 +264,7 @@ async function refreshTabs(
   isContents: boolean = false,
 ) {
   const sidebarBlocks = await logseq.App.getStateFromStore("sidebar/blocks")
+
   if (
     sidebarBlocks.some(([, , type]: [any, any, string]) => type === "blockRef")
   ) {
@@ -281,6 +285,16 @@ async function refreshTabs(
       }),
     )
     await logseq.App.setStateFromStore("sidebar/blocks", blocks)
+    return
+  }
+
+  const pinUuids = await readPinData(storage)
+  const [hasOpenings, newSidebarBlocks] = await checkForPins(
+    sidebarBlocks,
+    pinUuids,
+  )
+  if (hasOpenings) {
+    await logseq.App.setStateFromStore("sidebar/blocks", newSidebarBlocks)
     return
   }
 
@@ -349,6 +363,29 @@ async function refreshTabs(
   }
   lastDeleteIdx = -1
   reordering = false
+}
+
+async function checkForPins(sidebarBlocks: any[], pinnedUuids: string[]) {
+  const pinnedBlocks = (await getBlocksFromUuids(pinnedUuids)).filter(
+    (b) => b != null,
+  ) as (BlockEntity | PageEntity)[]
+
+  const hasOpenings = pinnedBlocks.some(
+    (b) => !sidebarBlocks.some(([, eid]) => b.id === eid),
+  )
+
+  if (hasOpenings) {
+    const filtered = sidebarBlocks.filter(([, eid]) =>
+      pinnedBlocks.every((b) => eid !== b.id),
+    )
+    const pinned = pinnedBlocks
+      .map((b) => [graphUrl, b.id, b.name ? "page" : "block"])
+      .reverse()
+    const newSidebarBlocks = [...filtered, ...pinned]
+    return [hasOpenings, newSidebarBlocks]
+  }
+
+  return [hasOpenings, null]
 }
 
 async function onTabCloseClick(e: MouseEvent) {

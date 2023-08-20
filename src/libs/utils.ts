@@ -85,3 +85,14 @@ export async function getBlock(index: number) {
       return null
   }
 }
+
+export async function getBlocksFromUuids(uuids: string[]) {
+  return await Promise.all(
+    uuids.map(async (uuid) => {
+      return (
+        (await logseq.Editor.getPage(uuid)) ??
+        (await logseq.Editor.getBlock(uuid))
+      )
+    }),
+  )
+}
