@@ -718,7 +718,21 @@ async function pin(index: number, container?: HTMLElement) {
 
 async function unpin(index: number, container?: HTMLElement) {
   unrender(container)
-  // TODO
+
+  const block = await getBlock(index)
+  if (block == null) return
+
+  const pinData = await readPinData(storage)
+  const to = pinData.length - 1
+
+  const i = pinData.indexOf(block.uuid)
+  if (i > -1) {
+    pinData.splice(i, 1)
+  }
+
+  await writePinData(pinData, storage)
+
+  await moveTab(index, to)
 }
 
 async function close(index: number, container?: HTMLElement) {
