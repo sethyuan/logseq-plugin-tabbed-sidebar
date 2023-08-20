@@ -176,6 +176,7 @@ function provideStyles() {
       font-family: 'tabler-icons';
     }
     .kef-ts-pinned {
+      flex: 0 0 auto;
       width: 28px;
       letter-spacing: 10px;
     }
