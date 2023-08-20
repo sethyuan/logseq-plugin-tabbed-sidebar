@@ -18,8 +18,6 @@ const TOOLTIP_WIDTH = 300
 const DECORATIVE_W = -4
 
 let todayPageId = 0
-let lastSidebarItemCount = -1
-let sidebarItemBeforeClosed: string | number = ""
 let activeIdx = 0
 let lastActiveIdx = 0
 let lastDeleteIdx = -1
@@ -46,12 +44,6 @@ async function main() {
         const todayPageName = await logseq.App.getStateFromStore("today")
         const today = await logseq.Editor.getPage(todayPageName)
         todayPageId = today!.id
-      } else {
-        const items = await logseq.App.getStateFromStore("sidebar/blocks")
-        ;[, sidebarItemBeforeClosed] = items[0] ?? []
-        lastSidebarItemCount = (
-          await logseq.App.getStateFromStore("sidebar/blocks")
-        ).length
       }
     },
   )
@@ -358,17 +350,18 @@ async function refreshTabs(
     if (index > -1) {
       await setActive(sidebarBlocks.length - 1 - index)
     }
+  } else if (newCount > 1) {
+    if (activeIdx >= itemList.length) {
+      activeIdx = 0
+    }
+    await setActive(activeIdx)
   } else if (
     (newCount === 1 ||
       (hasExistent && !isContents) ||
-      sidebarItemBeforeClosed !== topItemId ||
-      topItemId === todayPageId ||
-      (newCount > lastSidebarItemCount && lastSidebarItemCount > -1)) &&
+      topItemId === todayPageId) &&
     !reordering
   ) {
     await setActive(container.childElementCount - 1 - 1)
-  } else if (newCount > 1) {
-    await setActive(activeIdx)
   } else if (lastDeleteIdx > activeIdx) {
     await setActive(activeIdx < tabsCount ? activeIdx : activeIdx - 1)
   } else if (lastDeleteIdx === activeIdx) {
