@@ -255,6 +255,27 @@ function renderTabs() {
   drake = (parent as any).dragula([container], {
     direction: "horizontal",
     mirrorContainer: container,
+    accepts: (
+      el: HTMLElement,
+      target: HTMLElement,
+      _source: HTMLElement,
+      sibling: HTMLElement | null,
+    ) => {
+      if (sibling?.classList.contains("gu-mirror")) return false
+      return (
+        (!el.classList.contains("kef-ts-pinned") &&
+          !sibling?.classList.contains("kef-ts-pinned")) ||
+        (el.classList.contains("kef-ts-pinned") &&
+          ((sibling == null &&
+            target.lastElementChild?.previousElementSibling?.classList.contains(
+              "kef-ts-pinned",
+            )) ||
+            sibling?.classList.contains("kef-ts-pinned") ||
+            sibling?.previousElementSibling?.classList.contains(
+              "kef-ts-pinned",
+            )))
+      )
+    },
   })
   drake.on("drop", onDrop)
 }
@@ -635,10 +656,17 @@ async function onDrop(
 ) {
   const targetIndex =
     sibling == null
-      ? target.childElementCount - 1
+      ? target.childElementCount - 2
       : Array.prototype.indexOf.call(target.children, sibling) - 1
   drake.cancel(true)
   const sourceIndex = Array.prototype.indexOf.call(target.children, el)
+
+  if (el.classList.contains("kef-ts-pinned")) {
+    const pinData = await readPinData(storage)
+    const src = pinData.splice(sourceIndex, 1)
+    pinData.splice(targetIndex, 0, ...src)
+    await writePinData(pinData, storage)
+  }
 
   const stateSidebarBlocks = await logseq.App.getStateFromStore(
     "sidebar/blocks",
