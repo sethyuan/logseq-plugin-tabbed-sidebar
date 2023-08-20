@@ -13,6 +13,7 @@ Alternative sidebar that's organized in tabs.
 - The tab bar supports the display of the page icon property.
 - Batch closing tabs is possible through the context menu.
 - Drag to reorder the tabs.
+- Tabs can be pinned. A pinned tab is placed on the leftmost part, it is always opened and occupies just the size of an icon.
 
 ## Usage
 
