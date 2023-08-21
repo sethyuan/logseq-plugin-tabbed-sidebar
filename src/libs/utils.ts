@@ -96,3 +96,9 @@ export async function getBlocksFromUuids(uuids: string[]) {
     }),
   )
 }
+
+export async function persistBlockUUID(uuid: string) {
+  if (!(await logseq.Editor.getBlockProperty(uuid, "id"))) {
+    await logseq.Editor.upsertBlockProperty(uuid, "id", uuid)
+  }
+}

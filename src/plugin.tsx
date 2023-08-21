@@ -9,6 +9,7 @@ import {
   getBlocksFromUuids,
   isElement,
   parseContent,
+  persistBlockUUID,
   readPinData,
   writePinData,
 } from "./libs/utils"
@@ -732,6 +733,7 @@ async function pin(index: number, container?: HTMLElement) {
   if (block == null) return
 
   const pinData = await readPinData(storage)
+  await persistBlockUUID(block.uuid)
   pinData.push(block.uuid)
   await writePinData(pinData, storage)
 
