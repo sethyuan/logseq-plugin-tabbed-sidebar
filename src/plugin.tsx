@@ -21,7 +21,6 @@ const DECORATIVE_W = -4
 let todayPageId = 0
 let activeIdx = 0
 let lastActiveIdx = 0
-let lastDeleteIdx = -1
 let reordering = false
 let drake: any = null
 let nextActiveIdx = -1
@@ -367,20 +366,9 @@ async function refreshTabs(
     !reordering
   ) {
     await setActive(container.childElementCount - 1 - 1)
-  } else if (lastDeleteIdx > activeIdx) {
-    await setActive(activeIdx < tabsCount ? activeIdx : activeIdx - 1)
-  } else if (lastDeleteIdx === activeIdx) {
-    await setActive(
-      lastActiveIdx > lastDeleteIdx
-        ? lastActiveIdx - 1
-        : lastActiveIdx < tabsCount
-        ? lastActiveIdx
-        : lastActiveIdx - 1,
-    )
   } else {
     await updateTabs(container)
   }
-  lastDeleteIdx = -1
   reordering = false
 }
 
@@ -418,7 +406,6 @@ async function onTabCloseClick(e: MouseEvent) {
       target.parentElement!,
     )
     if (index < 0) return
-    lastDeleteIdx = index
     await close(index)
   }
 }
@@ -764,6 +751,7 @@ async function unpin(index: number, container?: HTMLElement) {
 
 async function close(index: number, container?: HTMLElement) {
   unrender(container)
+
   const sidebarBlocks = await logseq.App.getStateFromStore("sidebar/blocks")
   const realIndex = sidebarBlocks.length - 1 - index
   if (realIndex < 0) {
@@ -771,7 +759,15 @@ async function close(index: number, container?: HTMLElement) {
     return
   }
   sidebarBlocks.splice(realIndex, 1)
-  nextActiveIdx = Math.max(0, index > activeIdx ? activeIdx : activeIdx - 1)
+
+  const tabs = parent.document.querySelectorAll("#kef-ts-tabs > .kef-ts-header")
+  if (tabs) {
+    nextActiveIdx = Math.min(
+      tabs.length - 1,
+      Math.max(0, index > activeIdx ? activeIdx : lastActiveIdx),
+    )
+  }
+
   await logseq.App.setStateFromStore("sidebar/blocks", sidebarBlocks)
 }
 

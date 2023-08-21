@@ -1,6 +1,6 @@
 {
   "name": "logseq-plugin-tabbed-sidebar",
-  "version": "0.8.3",
+  "version": "0.8.4",
   "main": "dist/index.html",
   "logseq": {
     "id": "_sethyuan-logseq-tabbed-sidebar",
