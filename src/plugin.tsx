@@ -208,20 +208,23 @@ function provideStyles() {
     .sidebar-drop-indicator {
       display: none !important;
     }
-    .sidebar-item-header {
+    .sidebar-item-header:has(.page-title) {
       display: none !important;
     }
-    .sidebar-item > .flex > .flex > .flex > a {
-      display: none;
+    .sidebar-item-header {
+      background: unset !important;
     }
-    .sidebar-item a.close {
-      display: none;
+    .sidebar-item-header > button > span,
+    .sidebar-item-header > button + div {
+      display: none !important;
     }
-    .sidebar-item a.page-title {
-      display: none;
+    .sidebar-item-header + div.hidden {
+      display: block !important;
+      flex: 1 !important;
     }
-    .sidebar-item .initial > .ml-2 {
-      margin-left: 0;
+    .sidebar-item.collapsed {
+      flex: 1 1 !important;
+      overflow: hidden !important;
     }
     `,
   })
