@@ -203,6 +203,7 @@ function provideStyles() {
     }
     .sidebar-item-list {
       margin-top: 4px !important;
+      height: calc(100vh - 85px) !important;
     }
     .sidebar-drop-indicator {
       display: none !important;
