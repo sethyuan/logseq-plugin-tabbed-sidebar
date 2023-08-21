@@ -18,12 +18,12 @@ import zhCN from "./translations/zh-CN.json"
 const TOOLTIP_WIDTH = 300
 const DECORATIVE_W = -4
 
-let todayPageId = 0
 let activeIdx = 0
 let lastActiveIdx = 0
 let reordering = false
 let drake: any = null
 let nextActiveIdx = -1
+let lastTabsCount = -1
 
 let storage: IAsyncStorage
 let graphUrl: string
@@ -41,9 +41,6 @@ async function main() {
     async ({ visible }) => {
       if (visible) {
         renderTabs()
-        const todayPageName = await logseq.App.getStateFromStore("today")
-        const today = await logseq.Editor.getPage(todayPageName)
-        todayPageId = today!.id
       }
     },
   )
@@ -344,7 +341,7 @@ async function refreshTabs(
     container.children[0].remove()
   }
 
-  const [, topItemId] = sidebarBlocks[0] ?? []
+  const newTabsCount = container.childElementCount - 1
   if (nextActiveIdx > -1) {
     await setActive(nextActiveIdx)
     nextActiveIdx = -1
@@ -355,21 +352,19 @@ async function refreshTabs(
     if (index > -1) {
       await setActive(sidebarBlocks.length - 1 - index)
     }
-  } else if (newCount > 1) {
-    if (activeIdx >= itemList.length) {
-      activeIdx = 0
+  } else if (!reordering) {
+    if (lastTabsCount < newTabsCount) {
+      await setActive(newTabsCount - 1)
+    } else {
+      if (activeIdx >= itemList.length) {
+        activeIdx = 0
+      }
+      await setActive(activeIdx)
     }
-    await setActive(activeIdx)
-  } else if (
-    (newCount === 1 ||
-      (hasExistent && !isContents) ||
-      topItemId === todayPageId) &&
-    !reordering
-  ) {
-    await setActive(container.childElementCount - 1 - 1)
   } else {
     await updateTabs(container)
   }
+  lastTabsCount = newTabsCount
   reordering = false
 }
 
