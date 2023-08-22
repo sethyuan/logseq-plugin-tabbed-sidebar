@@ -591,7 +591,8 @@ async function updateTabs(container: HTMLElement) {
         case "page": {
           const page = await logseq.Editor.getPage(id)
           if (page == null) return
-          const displayName = `${page.properties?.icon ?? ""} ${
+          const icon = page.properties?.icon ?? (tab.classList.contains("kef-ts-pinned") ? "📄" : "")
+          const displayName = `${icon}${icon ? " " : ""}${
             page.originalName
           }`
           span.innerHTML = displayName
@@ -603,9 +604,11 @@ async function updateTabs(container: HTMLElement) {
           let displayName
           if (block["preBlock?"]) {
             const page = (await logseq.Editor.getPage(block.page.id))!
-            displayName = `${page.properties?.icon ?? ""} ${page.originalName}`
+            const icon = page.properties?.icon ?? (tab.classList.contains("kef-ts-pinned") ? "📄" : "")
+            displayName = `${icon}${icon ? " " : ""}${page.originalName}`
           } else {
-            displayName = await parseContent(block.content)
+            const icon = block.properties?.icon ?? (tab.classList.contains("kef-ts-pinned") ? "📄" : "")
+            displayName = `${icon}${icon ? " " : ""}${await parseContent(block.content)}`
           }
           span.innerHTML = displayName
           break
