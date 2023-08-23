@@ -56,10 +56,7 @@ async function main() {
             isElement(node) &&
             (node.classList.contains("sidebar-item") || existent)
           ) {
-            refreshTabs(
-              existent,
-              node.parentElement?.classList.contains("contents"),
-            )
+            refreshTabs(node.parentElement?.classList.contains("contents"))
             return
           }
         }
@@ -271,10 +268,7 @@ function renderTabs() {
   drake.on("drop", onDrop)
 }
 
-async function refreshTabs(
-  hasExistent: boolean = false,
-  isContents: boolean = false,
-) {
+async function refreshTabs(isContents: boolean = false) {
   const sidebarBlocks = await logseq.App.getStateFromStore("sidebar/blocks")
 
   if (
@@ -357,6 +351,7 @@ async function refreshTabs(
   } else {
     await updateTabs(container)
   }
+
   lastTabsCount = newTabsCount
   reordering = false
 }
@@ -454,6 +449,7 @@ async function onTabContextMenu(e: MouseEvent) {
   // ensure context menu stays inside the viewport.
   const x = Math.min(e.clientX, parent.innerWidth - 168)
   const isPinned = el.classList.contains("kef-ts-pinned")
+  const isMoved = el.classList.contains("kef-ts-moved")
 
   render(
     <Menu x={x} y={e.clientY} onClose={() => unrender(menuContainer)}>
@@ -463,14 +459,46 @@ async function onTabContextMenu(e: MouseEvent) {
       >
         {t("Open")}
       </button>
-      <button
-        class="kef-ts-menu-item"
-        onClick={() =>
-          isPinned ? unpin(index, menuContainer) : pin(index, menuContainer)
-        }
-      >
-        {isPinned ? t("Unpin") : t("Pin")}
-      </button>
+      {!isMoved && (
+        <button
+          class="kef-ts-menu-item"
+          onClick={() =>
+            isPinned ? unpin(index, menuContainer) : pin(index, menuContainer)
+          }
+        >
+          {isPinned ? t("Unpin") : t("Pin")}
+        </button>
+      )}
+      {!isPinned && !isMoved && (
+        <button
+          class="kef-ts-menu-item"
+          onClick={() => moveUp(index, menuContainer)}
+        >
+          {t("Move Up")}
+        </button>
+      )}
+      {!isPinned && !isMoved && (
+        <button
+          class="kef-ts-menu-item"
+          onClick={() => moveDown(index, menuContainer)}
+        >
+          {t("Move Down")}
+        </button>
+      )}
+      {!isPinned && isMoved && (
+        <button
+          class="kef-ts-menu-item"
+          onClick={() =>
+            moveBack(
+              index,
+              menuContainer,
+              el.classList.contains("kef-ts-moved-up"),
+            )
+          }
+        >
+          {t("Move Back")}
+        </button>
+      )}
       {!isPinned && (
         <>
           <button
@@ -550,7 +578,13 @@ async function setActive(idx: number) {
   const itemListLen = itemList.length
   for (let i = 0; i < itemListLen; i++) {
     const item = itemList[itemListLen - 1 - i] as HTMLElement
-    if (i === idx) {
+    if (container.children[i].classList.contains("kef-ts-moved-up")) {
+      item.style.display = ""
+      item.classList.add("kef-ts-item-moved-up")
+    } else if (container.children[i].classList.contains("kef-ts-moved-down")) {
+      item.style.display = ""
+      item.classList.add("kef-ts-item-moved-down")
+    } else if (i === idx) {
       item.style.display = ""
     } else {
       item.style.display = "none"
@@ -752,6 +786,37 @@ async function unpin(index: number, container?: HTMLElement) {
   )
 
   await moveTab(index, to)
+}
+
+async function moveUp(index: number, container?: HTMLElement) {
+  unrender(container)
+
+  const block = await getBlock(index)
+  if (block == null) return
+
+  // TODO: stored in memory
+}
+
+async function moveDown(index: number, container?: HTMLElement) {
+  unrender(container)
+
+  const block = await getBlock(index)
+  if (block == null) return
+
+  // TODO
+}
+
+async function moveBack(
+  index: number,
+  container: HTMLElement | undefined,
+  fromUp: boolean,
+) {
+  unrender(container)
+
+  const block = await getBlock(index)
+  if (block == null) return
+
+  // TODO
 }
 
 async function close(index: number, container?: HTMLElement) {
