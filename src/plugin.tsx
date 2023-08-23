@@ -769,7 +769,7 @@ async function close(index: number, container?: HTMLElement) {
   if (tabs) {
     nextActiveIdx = Math.min(
       tabs.length - 2,
-      Math.max(0, index >= activeIdx ? activeIdx : lastActiveIdx),
+      Math.max(0, index > activeIdx ? activeIdx : lastActiveIdx),
     )
   }
 
