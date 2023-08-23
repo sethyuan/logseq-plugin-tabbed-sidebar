@@ -1,12 +1,10 @@
 import "@logseq/libs"
-import { BlockEntity, PageEntity } from "@logseq/libs/dist/LSPlugin.user"
 import { IAsyncStorage } from "@logseq/libs/dist/modules/LSPlugin.Storage"
 import { setup, t } from "logseq-l10n"
 import { render } from "preact"
 import Menu from "./comps/Menu"
 import {
   getBlock,
-  getBlocksFromUuids,
   isElement,
   parseContent,
   persistBlockUUID,
@@ -200,7 +198,6 @@ function provideStyles() {
     }
     .sidebar-item-list {
       margin-top: 4px !important;
-      height: calc(100vh - 85px) !important;
     }
     .sidebar-drop-indicator {
       display: none !important;
@@ -303,11 +300,7 @@ async function refreshTabs(
     return
   }
 
-  const pinUuids = await readPinData(storage)
-  const [hasOpenings, newSidebarBlocks] = await checkForPins(
-    sidebarBlocks,
-    pinUuids,
-  )
+  const [hasOpenings, newSidebarBlocks] = await checkForPins(sidebarBlocks)
   if (hasOpenings) {
     await logseq.App.setStateFromStore("sidebar/blocks", newSidebarBlocks)
     return
@@ -368,10 +361,8 @@ async function refreshTabs(
   reordering = false
 }
 
-async function checkForPins(sidebarBlocks: any[], pinnedUuids: string[]) {
-  const pinnedBlocks = (await getBlocksFromUuids(pinnedUuids)).filter(
-    (b) => b != null,
-  ) as (BlockEntity | PageEntity)[]
+async function checkForPins(sidebarBlocks: any[]) {
+  const pinnedBlocks = await readPinData(storage)
 
   const hasOpenings = pinnedBlocks.some(
     (b) => !sidebarBlocks.some(([, eid]) => b.id === eid),
@@ -591,10 +582,10 @@ async function updateTabs(container: HTMLElement) {
         case "page": {
           const page = await logseq.Editor.getPage(id)
           if (page == null) return
-          const icon = page.properties?.icon ?? (tab.classList.contains("kef-ts-pinned") ? "📄" : "")
-          const displayName = `${icon}${icon ? " " : ""}${
-            page.originalName
-          }`
+          const icon =
+            page.properties?.icon ??
+            (tab.classList.contains("kef-ts-pinned") ? "📄" : "")
+          const displayName = `${icon}${icon ? " " : ""}${page.originalName}`
           span.innerHTML = displayName
           break
         }
@@ -604,11 +595,17 @@ async function updateTabs(container: HTMLElement) {
           let displayName
           if (block["preBlock?"]) {
             const page = (await logseq.Editor.getPage(block.page.id))!
-            const icon = page.properties?.icon ?? (tab.classList.contains("kef-ts-pinned") ? "📄" : "")
+            const icon =
+              page.properties?.icon ??
+              (tab.classList.contains("kef-ts-pinned") ? "📄" : "")
             displayName = `${icon}${icon ? " " : ""}${page.originalName}`
           } else {
-            const icon = block.properties?.icon ?? (tab.classList.contains("kef-ts-pinned") ? "📄" : "")
-            displayName = `${icon}${icon ? " " : ""}${await parseContent(block.content)}`
+            const icon =
+              block.properties?.icon ??
+              (tab.classList.contains("kef-ts-pinned") ? "📄" : "")
+            displayName = `${icon}${icon ? " " : ""}${await parseContent(
+              block.content,
+            )}`
           }
           span.innerHTML = displayName
           break
@@ -649,7 +646,10 @@ async function onDrop(
     const pinData = await readPinData(storage)
     const src = pinData.splice(sourceIndex, 1)
     pinData.splice(targetIndex, 0, ...src)
-    await writePinData(pinData, storage)
+    await writePinData(
+      pinData.map((b) => b.name ?? b.uuid),
+      storage,
+    )
   }
 
   const stateSidebarBlocks = await logseq.App.getStateFromStore(
@@ -722,11 +722,12 @@ async function pin(index: number, container?: HTMLElement) {
   if (block == null) return
 
   const pinData = await readPinData(storage)
-  await persistBlockUUID(block.uuid)
-  pinData.push(block.uuid)
-  await writePinData(pinData, storage)
+  await persistBlockUUID(block)
+  const pinned = pinData.map((b) => b.name ?? b.uuid)
+  pinned.push(block.name ?? block.uuid)
+  await writePinData(pinned, storage)
 
-  await moveTab(index, pinData.length - 1)
+  await moveTab(index, pinned.length - 1)
 }
 
 async function unpin(index: number, container?: HTMLElement) {
@@ -738,12 +739,17 @@ async function unpin(index: number, container?: HTMLElement) {
   const pinData = await readPinData(storage)
   const to = pinData.length - 1
 
-  const i = pinData.indexOf(block.uuid)
+  const i = pinData.findIndex(
+    (b) => b.name === block.name || b.uuid === block.uuid,
+  )
   if (i > -1) {
     pinData.splice(i, 1)
   }
 
-  await writePinData(pinData, storage)
+  await writePinData(
+    pinData.map((b) => b.name ?? b.uuid),
+    storage,
+  )
 
   await moveTab(index, to)
 }
@@ -762,8 +768,8 @@ async function close(index: number, container?: HTMLElement) {
   const tabs = parent.document.querySelectorAll("#kef-ts-tabs > .kef-ts-header")
   if (tabs) {
     nextActiveIdx = Math.min(
-      tabs.length - 1,
-      Math.max(0, index > activeIdx ? activeIdx : lastActiveIdx),
+      tabs.length - 2,
+      Math.max(0, index >= activeIdx ? activeIdx : lastActiveIdx),
     )
   }
 

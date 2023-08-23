@@ -1,3 +1,4 @@
+import { BlockEntity, PageEntity } from "@logseq/libs/dist/LSPlugin.user"
 import { IAsyncStorage } from "@logseq/libs/dist/modules/LSPlugin.Storage"
 import { parse } from "./marked-renderer"
 
@@ -52,11 +53,31 @@ export function isElement(node: Node): node is HTMLElement {
   return node.nodeType === 1
 }
 
-export async function readPinData(storage: IAsyncStorage): Promise<string[]> {
+export async function readPinData(
+  storage: IAsyncStorage,
+): Promise<(BlockEntity | PageEntity)[]> {
   try {
     if (!(await storage.hasItem(PIN_DATA_KEY))) return []
     const pinStr = (await storage.getItem(PIN_DATA_KEY))!
-    return JSON.parse(pinStr)
+    const pinned: string[] = JSON.parse(pinStr)
+    const blocks = (
+      await Promise.all(
+        pinned.map(
+          async (id: string) =>
+            (await logseq.Editor.getPage(id)) ??
+            (await logseq.Editor.getBlock(id)),
+        ),
+      )
+    ).filter((b) => b != null) as (BlockEntity | PageEntity)[]
+
+    if (blocks.length < pinned.length) {
+      await writePinData(
+        blocks.map((b) => b.name ?? b.uuid),
+        storage,
+      )
+    }
+
+    return blocks
   } catch (err) {
     console.error(err)
     return []
@@ -86,19 +107,9 @@ export async function getBlock(index: number) {
   }
 }
 
-export async function getBlocksFromUuids(uuids: string[]) {
-  return await Promise.all(
-    uuids.map(async (uuid) => {
-      return (
-        (await logseq.Editor.getPage(uuid)) ??
-        (await logseq.Editor.getBlock(uuid))
-      )
-    }),
-  )
-}
-
-export async function persistBlockUUID(uuid: string) {
-  if (!(await logseq.Editor.getBlockProperty(uuid, "id"))) {
-    await logseq.Editor.upsertBlockProperty(uuid, "id", uuid)
+export async function persistBlockUUID(block: BlockEntity | PageEntity) {
+  if (block.name) return
+  if (!(await logseq.Editor.getBlockProperty(block.uuid, "id"))) {
+    await logseq.Editor.upsertBlockProperty(block.uuid, "id", block.uuid)
   }
 }
