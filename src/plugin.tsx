@@ -26,6 +26,8 @@ let lastTabsCount = -1
 let storage: IAsyncStorage
 let graphUrl: string
 
+const moved = new Map<number, "up" | "down">()
+
 async function main() {
   await setup({ builtinTranslations: { "zh-CN": zhCN } })
 
@@ -167,7 +169,8 @@ function provideStyles() {
       flex: 0 1 0%;
       font-family: 'tabler-icons';
     }
-    .kef-ts-pinned {
+    .kef-ts-pinned,
+    .kef-ts-moved {
       flex: 0 0 auto;
       width: 28px;
       letter-spacing: 10px;
@@ -192,6 +195,9 @@ function provideStyles() {
     }
     .kef-ts-menu-item:hover {
       background-color: var(--ls-primary-background-color);
+    }
+    #right-sidebar-container {
+      position: relative !important;
     }
     .sidebar-item-list {
       margin-top: 4px !important;
@@ -271,6 +277,14 @@ function renderTabs() {
 async function refreshTabs(isContents: boolean = false) {
   const sidebarBlocks = await logseq.App.getStateFromStore("sidebar/blocks")
 
+  if (sidebarBlocks.length === 0) {
+    moved.clear()
+
+    const contents = [graphUrl, "contents", "contents"]
+    sidebarBlocks.push(contents)
+    await logseq.App.setStateFromStore("sidebar/blocks", [contents])
+  }
+
   if (
     sidebarBlocks.some(([, , type]: [any, any, string]) => type === "blockRef")
   ) {
@@ -330,26 +344,26 @@ async function refreshTabs(isContents: boolean = false) {
 
   const newTabsCount = container.childElementCount - 1
   if (nextActiveIdx > -1) {
-    await setActive(nextActiveIdx)
+    await setActive(nextActiveIdx, sidebarBlocks)
     nextActiveIdx = -1
   } else if (isContents) {
     const index = sidebarBlocks.findIndex(
       ([, , type]: [any, any, string]) => type === "contents",
     )
     if (index > -1) {
-      await setActive(sidebarBlocks.length - 1 - index)
+      await setActive(sidebarBlocks.length - 1 - index, sidebarBlocks)
     }
   } else if (!reordering) {
     if (lastTabsCount < newTabsCount) {
-      await setActive(newTabsCount - 1)
+      await setActive(newTabsCount - 1, sidebarBlocks)
     } else {
       if (activeIdx >= itemList.length) {
         activeIdx = 0
       }
-      await setActive(activeIdx)
+      await setActive(activeIdx, sidebarBlocks)
     }
   } else {
-    await updateTabs(container)
+    await updateTabs(container, sidebarBlocks)
   }
 
   lastTabsCount = newTabsCount
@@ -554,7 +568,7 @@ function onTabMouseLeave(e: MouseEvent) {
   tooltip.style.display = ""
 }
 
-async function setActive(idx: number) {
+async function setActive(idx: number, sidebarBlocks?: any[]) {
   const container = parent.document.getElementById("kef-ts-tabs")
   if (container == null) return
   const itemList = parent.document.querySelectorAll(
@@ -563,12 +577,37 @@ async function setActive(idx: number) {
   if (itemList == null) return
   const tabsCount = container.childElementCount - 1
 
+  if (sidebarBlocks == null) {
+    sidebarBlocks = (await logseq.App.getStateFromStore("sidebar/blocks"))!
+  }
+
+  const pinData = await readPinData(storage)
+
   for (let i = 0; i < tabsCount; i++) {
     const tab = container.children[i] as HTMLElement
+
     if (i === idx) {
       tab.classList.add("kef-ts-active")
     } else {
       tab.classList.remove("kef-ts-active")
+    }
+
+    if (i < pinData.length) {
+      tab.classList.add("kef-ts-pinned")
+    } else {
+      tab.classList.remove("kef-ts-pinned")
+    }
+
+    const [, id] = sidebarBlocks[sidebarBlocks.length - 1 - i]
+    if (moved.has(id)) {
+      tab.classList.add("kef-ts-moved")
+      tab.classList.remove("kef-ts-moved-up")
+      tab.classList.remove("kef-ts-moved-down")
+      tab.classList.add(`kef-ts-moved-${moved.get(id)}`)
+    } else {
+      tab.classList.remove("kef-ts-moved")
+      tab.classList.remove("kef-ts-moved-up")
+      tab.classList.remove("kef-ts-moved-down")
     }
   }
 
@@ -576,41 +615,74 @@ async function setActive(idx: number) {
   activeIdx = idx
 
   const itemListLen = itemList.length
+  let top = 48 // Default beginning
+  let bottom = 0 // Default beginning
   for (let i = 0; i < itemListLen; i++) {
     const item = itemList[itemListLen - 1 - i] as HTMLElement
     if (container.children[i].classList.contains("kef-ts-moved-up")) {
       item.style.display = ""
-      item.classList.add("kef-ts-item-moved-up")
+      item.style.position = "absolute"
+      item.style.left = "8px"
+      item.style.right = "8px"
+      item.style.zIndex = "var(--ls-z-index-level-1)"
+      item.style.top = `${top}px`
+      item.style.bottom = ""
+      top += item.offsetHeight
     } else if (container.children[i].classList.contains("kef-ts-moved-down")) {
       item.style.display = ""
-      item.classList.add("kef-ts-item-moved-down")
+      item.style.position = "absolute"
+      item.style.left = "8px"
+      item.style.right = "8px"
+      item.style.zIndex = "var(--ls-z-index-level-1)"
+      item.style.bottom = `${bottom}px`
+      item.style.top = ""
+      bottom += item.offsetHeight
     } else if (i === idx) {
       item.style.display = ""
+      item.style.position = ""
+      item.style.left = ""
+      item.style.right = ""
+      item.style.zIndex = ""
+      item.style.top = ""
+      item.style.bottom = ""
     } else {
       item.style.display = "none"
+      item.style.position = ""
+      item.style.left = ""
+      item.style.right = ""
+      item.style.zIndex = ""
+      item.style.top = ""
+      item.style.bottom = ""
     }
   }
 
-  await updateTabs(container)
+  if (top > 48) {
+    container.style.marginTop = `${top - 48 + 10}px`
+  } else {
+    container.style.marginTop = "0"
+  }
+  const sidebarListContainer = parent.document.querySelector(
+    ".sidebar-item-list",
+  ) as HTMLElement | null
+  if (sidebarListContainer != null) {
+    if (bottom === 0) {
+      sidebarListContainer.style.height = `calc(100vh - ${top + bottom}px)`
+    } else {
+      sidebarListContainer.style.height = `calc(100vh - ${
+        top + bottom
+      }px - 50px)`
+    }
+  }
+
+  await updateTabs(container, sidebarBlocks)
 }
 
-async function updateTabs(container: HTMLElement) {
-  const sideBlocks = await logseq.App.getStateFromStore("sidebar/blocks")
-  if (sideBlocks.length === 0) {
-    sideBlocks.push(["", "contents", "contents"])
-  }
-  const pinData = await readPinData(storage)
+async function updateTabs(container: HTMLElement, sidebarBlocks: any[]) {
   const tabs = container.querySelectorAll(".kef-ts-header")
 
   await Promise.all(
     Array.prototype.map.call(tabs, async (tab: HTMLElement, i) => {
-      if (i < pinData.length) {
-        tab.classList.add("kef-ts-pinned")
-      } else {
-        tab.classList.remove("kef-ts-pinned")
-      }
-
-      const [_graph, id, type] = sideBlocks[sideBlocks.length - 1 - i]
+      const [_graph, id, type] = sidebarBlocks[sidebarBlocks.length - 1 - i]
       const span = tab.querySelector(".kef-ts-block-title")!
       switch (type) {
         case "page": {
@@ -620,7 +692,7 @@ async function updateTabs(container: HTMLElement) {
             page.properties?.icon ??
             (tab.classList.contains("kef-ts-pinned") ? "📄" : "")
           const displayName = `${icon}${icon ? " " : ""}${page.originalName}`
-          span.innerHTML = displayName
+          span.innerHTML = `${moved.has(id) ? "📎 " : ""}${displayName}`
           break
         }
         case "block": {
@@ -641,7 +713,7 @@ async function updateTabs(container: HTMLElement) {
               block.content,
             )}`
           }
-          span.innerHTML = displayName
+          span.innerHTML = `${moved.has(id) ? "📎 " : ""}${displayName}`
           break
         }
         case "help": {
@@ -699,7 +771,7 @@ async function onDrop(
     (sourceIndex < activeIdx && targetIndex < activeIdx) ||
     (sourceIndex > activeIdx && targetIndex > activeIdx)
   ) {
-    // Do nothing
+    setTimeout(() => setActive(activeIdx), 16)
   } else if (sourceIndex > activeIdx) {
     nextActiveIdx = activeIdx + 1
     setActive(nextActiveIdx)
@@ -791,19 +863,21 @@ async function unpin(index: number, container?: HTMLElement) {
 async function moveUp(index: number, container?: HTMLElement) {
   unrender(container)
 
-  const block = await getBlock(index)
-  if (block == null) return
+  const sidebarBlocks = await logseq.App.getStateFromStore("sidebar/blocks")
+  const [, id] = sidebarBlocks[sidebarBlocks.length - 1 - index]
+  moved.set(id, "up")
 
-  // TODO: stored in memory
+  await setActive(activeIdx, sidebarBlocks)
 }
 
 async function moveDown(index: number, container?: HTMLElement) {
   unrender(container)
 
-  const block = await getBlock(index)
-  if (block == null) return
+  const sidebarBlocks = await logseq.App.getStateFromStore("sidebar/blocks")
+  const [, id] = sidebarBlocks[sidebarBlocks.length - 1 - index]
+  moved.set(id, "down")
 
-  // TODO
+  await setActive(activeIdx, sidebarBlocks)
 }
 
 async function moveBack(
@@ -813,10 +887,11 @@ async function moveBack(
 ) {
   unrender(container)
 
-  const block = await getBlock(index)
-  if (block == null) return
+  const sidebarBlocks = await logseq.App.getStateFromStore("sidebar/blocks")
+  const [, id] = sidebarBlocks[sidebarBlocks.length - 1 - index]
+  moved.delete(id)
 
-  // TODO
+  await setActive(activeIdx, sidebarBlocks)
 }
 
 async function close(index: number, container?: HTMLElement) {
