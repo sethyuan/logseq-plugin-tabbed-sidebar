@@ -14,6 +14,7 @@ Alternative sidebar that's organized in tabs.
 - Batch closing tabs is possible through the context menu.
 - Drag to reorder the tabs.
 - Tabs can be pinned. A pinned tab is placed on the leftmost part, it is always opened and occupies just the size of an icon.
+- Tabs can be moved up and down so you can browse multiples tabs at the same time.
 
 ## Usage
 
