@@ -1,6 +1,6 @@
 {
   "name": "logseq-plugin-tabbed-sidebar",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "main": "dist/index.html",
   "logseq": {
     "id": "_sethyuan-logseq-tabbed-sidebar",
@@ -17,6 +17,7 @@
     "logseq-l10n": "^0.2.0",
     "marked": "^5.1.0",
     "preact": "^10.14.1",
+    "rambdax": "^10.0.0",
     "reactutils": "^5.13.0"
   },
   "devDependencies": {

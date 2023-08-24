@@ -1,4 +1,4 @@
-lockfileVersion: '6.1'
+lockfileVersion: '6.0'
 
 settings:
   autoInstallPeers: true
@@ -20,6 +20,9 @@ dependencies:
   preact:
     specifier: ^10.14.1
     version: 10.14.1
+  rambdax:
+    specifier: ^10.0.0
+    version: 10.0.0
   reactutils:
     specifier: ^5.13.0
     version: 5.13.0(react@18.2.0)
@@ -913,6 +916,10 @@ packages:
   /process@0.11.10:
     resolution: {integrity: sha512-cdGef/drWFoydD1JsMzuFf8100nZl+GT+yacc2bEced5f9Rjk4z+WtFUTBu9PhOi9j/jfmBPu0mMEY4wIdAF8A==}
     engines: {node: '>= 0.6.0'}
+    dev: false
+
+  /rambdax@10.0.0:
+    resolution: {integrity: sha512-yNlWz9g4h6C2+49r1L+L9WZLcw3b3mQnxZQfcyqon8hy52Ie6hsWeuxO9/MNXTbqWB2RuSzO5MM3rVSsPKsqfw==}
     dev: false
 
   /react@18.2.0:
