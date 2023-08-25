@@ -253,11 +253,18 @@ function provideStyles() {
       left: 8px;
       right: 8px;
       z-index: var(--ls-z-index-level-1);
-      max-height: 24%;
+      max-height: 25%;
       overflow: auto;
     }
     .sidebar-item[data-moved="true"] .sidebar-item-header:has(.page-title) {
       display: flex !important;
+    }
+    .sidebar-item[data-moved="true"] .sidebar-item-header + div {
+      overflow: auto;
+    }
+    .sidebar-item[data-moved="true"] .sidebar-item-header + div.hidden {
+      display: none !important;
+      flex: unset !important;
     }
     .kef-ts-menu {
       position: fixed;
@@ -567,7 +574,7 @@ async function onTabContextMenu(e: MouseEvent) {
           {isPinned ? t("Unpin") : t("Pin")}
         </button>
       )}
-      {!isPinned && !isMoved && moved.size < 2 && (
+      {!isMoved && moved.size < 2 && (
         <button
           class="kef-ts-menu-item"
           onClick={() => moveUp(index, menuContainer)}
@@ -575,7 +582,7 @@ async function onTabContextMenu(e: MouseEvent) {
           {t("Move Up")}
         </button>
       )}
-      {!isPinned && !isMoved && moved.size < 2 && (
+      {!isMoved && moved.size < 2 && (
         <button
           class="kef-ts-menu-item"
           onClick={() => moveDown(index, menuContainer)}
@@ -583,7 +590,7 @@ async function onTabContextMenu(e: MouseEvent) {
           {t("Move Down")}
         </button>
       )}
-      {!isPinned && isMoved && (
+      {isMoved && (
         <button
           class="kef-ts-menu-item"
           onClick={() =>
