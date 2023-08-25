@@ -19,6 +19,7 @@ const DECORATIVE_W = -4
 const TAB_V_START = 48
 const TAB_V_SPACING = 8
 const TAB_V_DRAGBAR_SPACING = 4
+const TAB_V_HEIGHT_KEY = "kef-ts-tab-height"
 
 let sidebarResizeObserver: ResizeObserver
 
@@ -181,6 +182,11 @@ function initialize() {
   }
 
   moved.clear()
+
+  // HACK: clear as many as possible.
+  for (let i = 0; i < 50; i++) {
+    sessionStorage.removeItem(`${TAB_V_HEIGHT_KEY}-${i}`)
+  }
 
   sidebarResizeObserver.disconnect()
   const sidebar = parent.document.getElementById("right-sidebar")
@@ -741,6 +747,11 @@ async function setActive(idx: number, sidebarBlocks?: any[], itemList?: any) {
       item.style.display = ""
       item.style.top = `${top}px`
       item.style.bottom = ""
+      const storedHeight = sessionStorage.getItem(`${TAB_V_HEIGHT_KEY}-${i}`)
+      if (storedHeight != null) {
+        item.style.height = storedHeight
+      }
+      sidebarResizeObserver.observe(item)
 
       const dragBar =
         (parent.document.querySelector(
@@ -756,6 +767,11 @@ async function setActive(idx: number, sidebarBlocks?: any[], itemList?: any) {
       item.style.display = ""
       item.style.bottom = `${bottom}px`
       item.style.top = ""
+      const storedHeight = sessionStorage.getItem(`${TAB_V_HEIGHT_KEY}-${i}`)
+      if (storedHeight != null) {
+        item.style.height = storedHeight
+      }
+      sidebarResizeObserver.observe(item)
 
       const dragBar =
         (parent.document.querySelector(
@@ -767,15 +783,17 @@ async function setActive(idx: number, sidebarBlocks?: any[], itemList?: any) {
       dragBar.style.left = `${rect.left}px`
       bottom += item.offsetHeight + TAB_V_SPACING
     } else if (i === idx) {
-      item.dataset.moved = ""
       item.style.display = ""
-      item.style.top = ""
-      item.style.bottom = ""
-    } else {
       item.dataset.moved = ""
-      item.style.display = "none"
       item.style.top = ""
       item.style.bottom = ""
+      sidebarResizeObserver.unobserve(item)
+    } else {
+      item.style.display = "none"
+      item.dataset.moved = ""
+      item.style.top = ""
+      item.style.bottom = ""
+      sidebarResizeObserver.unobserve(item)
     }
   }
 
@@ -1166,6 +1184,10 @@ function onDragUp(e: PointerEvent) {
   const diff = e.y - parseInt(startTop)
   const newHeight = item.offsetHeight + (dir === "up" ? diff : -1 * diff)
   item.style.height = `${newHeight - TAB_V_DRAGBAR_SPACING}px`
+  sessionStorage.setItem(
+    `${TAB_V_HEIGHT_KEY}-${draggingTarget.dataset.index}`,
+    item.style.height,
+  )
   const dragBar = draggingTarget
   setTimeout(() => {
     const rect = item.getBoundingClientRect()
