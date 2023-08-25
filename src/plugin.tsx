@@ -1052,6 +1052,7 @@ async function moveBack(
   const item = itemList[itemList.length - 1 - index] as HTMLElement
   item.style.height = ""
   sidebarResizeObserver.unobserve(item)
+  sessionStorage.removeItem(`${TAB_V_HEIGHT_KEY}-${index}`)
 
   removeDragBar(index)
 
