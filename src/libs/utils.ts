@@ -4,7 +4,7 @@ import { parse } from "./marked-renderer"
 
 const TASK_REGEX = /^(?:TODO|LATER|DOING|NOW|DONE|CANCELED|WAITING) /
 
-const PIN_DATA_KEY = "pin.json"
+const PIN_KEY = "pin.json"
 
 export async function parseContent(content: string) {
   // Use only the first line.
@@ -54,11 +54,13 @@ export function isElement(node: Node): node is HTMLElement {
 }
 
 export async function readPinData(
+  graphName: string,
   storage: IAsyncStorage,
 ): Promise<(BlockEntity | PageEntity)[]> {
+  const pinKey = `${graphName}-${PIN_KEY}`
   try {
-    if (!(await storage.hasItem(PIN_DATA_KEY))) return []
-    const pinStr = (await storage.getItem(PIN_DATA_KEY))!
+    if (!(await storage.hasItem(pinKey))) return []
+    const pinStr = (await storage.getItem(pinKey))!
     const pinned: string[] = JSON.parse(pinStr)
     const blocks = (
       await Promise.all(
@@ -72,6 +74,7 @@ export async function readPinData(
 
     if (blocks.length < pinned.length) {
       await writePinData(
+        graphName,
         blocks.map((b) => b.name ?? b.uuid),
         storage,
       )
@@ -84,8 +87,13 @@ export async function readPinData(
   }
 }
 
-export async function writePinData(data: string[], storage: IAsyncStorage) {
-  await storage.setItem(PIN_DATA_KEY, JSON.stringify(data))
+export async function writePinData(
+  graphName: string,
+  data: string[],
+  storage: IAsyncStorage,
+) {
+  const pinKey = `${graphName}-${PIN_KEY}`
+  await storage.setItem(pinKey, JSON.stringify(data))
 }
 
 export async function getBlock(index: number) {

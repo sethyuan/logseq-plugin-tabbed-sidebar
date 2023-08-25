@@ -29,6 +29,7 @@ let nextActiveIdx = -1
 let lastTabsCount = -1
 
 let storage: IAsyncStorage
+let graphName: string
 let graphUrl: string
 
 const moved = new Map<number, "up" | "down">()
@@ -83,7 +84,9 @@ async function main() {
   provideStyles()
 
   storage = logseq.Assets.makeSandboxStorage()
-  graphUrl = (await logseq.App.getCurrentGraph())!.url
+  const graph = (await logseq.App.getCurrentGraph())!
+  graphName = graph.name
+  graphUrl = graph.url
 
   const sidebarVisibleOffHook = logseq.App.onSidebarVisibleChanged(
     async ({ visible }) => {
@@ -127,7 +130,13 @@ async function main() {
     sidebarResizeObserver.observe(sidebar)
   }
 
-  const graphChangeOffHook = logseq.App.onCurrentGraphChanged(() => {
+  const graphChangeOffHook = logseq.App.onCurrentGraphChanged(async () => {
+    const graph = (await logseq.App.getCurrentGraph())!
+    graphName = graph.name
+    graphUrl = graph.url
+
+    initialize()
+
     logseq.App.clearRightSidebarBlocks()
   })
 
@@ -156,6 +165,15 @@ function injectDeps() {
     link.href = css
     link.type = "text/css"
     parent.document.head.append(link)
+  }
+}
+
+function initialize() {
+  moved.clear()
+  sidebarResizeObserver.disconnect()
+  const sidebar = parent.document.getElementById("right-sidebar")
+  if (sidebar != null) {
+    sidebarResizeObserver.observe(sidebar)
   }
 }
 
@@ -344,8 +362,7 @@ async function refreshTabs(isContents: boolean = false) {
   const sidebarBlocks = await logseq.App.getStateFromStore("sidebar/blocks")
 
   if (sidebarBlocks.length === 0) {
-    moved.clear()
-    sidebarResizeObserver.disconnect()
+    initialize()
 
     const contents = [graphUrl, "contents", "contents"]
     sidebarBlocks.push(contents)
@@ -438,7 +455,7 @@ async function refreshTabs(isContents: boolean = false) {
 }
 
 async function checkForPins(sidebarBlocks: any[]) {
-  const pinnedBlocks = await readPinData(storage)
+  const pinnedBlocks = await readPinData(graphName, storage)
 
   const hasOpenings = pinnedBlocks.some(
     (b) => !sidebarBlocks.some(([, eid]) => b.id === eid),
@@ -617,7 +634,7 @@ function onTabMouseEnter(e: MouseEvent) {
   const container = parent.document.getElementById("kef-ts-tabs")!
   const tooltip = parent.document.getElementById("kef-ts-tooltip")!
   const tab = e.target as HTMLElement
-  const tabTitle = tab.querySelector(".kef-ts-block-title")!
+  const tabTitle = tab.querySelector(".kef-ts-block-title") as HTMLElement
   const tabRect = tab.getBoundingClientRect()
 
   if (tabRect.left + DECORATIVE_W + TOOLTIP_WIDTH > parent.innerWidth) {
@@ -626,7 +643,7 @@ function onTabMouseEnter(e: MouseEvent) {
     tooltip.style.translate = `${tab.offsetLeft + DECORATIVE_W}px`
   }
 
-  tooltip.innerHTML = tabTitle.innerHTML
+  tooltip.innerText = tabTitle.innerText
   tooltip.style.display = "block"
 }
 
@@ -652,7 +669,7 @@ async function setActive(idx: number, sidebarBlocks?: any[], itemList?: any) {
     sidebarBlocks = (await logseq.App.getStateFromStore("sidebar/blocks"))!
   }
 
-  const pinData = await readPinData(storage)
+  const pinData = await readPinData(graphName, storage)
 
   for (let i = 0; i < tabsCount; i++) {
     const tab = container.children[i] as HTMLElement
@@ -742,7 +759,7 @@ async function updateTabs(container: HTMLElement, sidebarBlocks: any[]) {
   await Promise.all(
     Array.prototype.map.call(tabs, async (tab: HTMLElement, i) => {
       const [_graph, id, type] = sidebarBlocks[sidebarBlocks.length - 1 - i]
-      const span = tab.querySelector(".kef-ts-block-title")!
+      const span = tab.querySelector(".kef-ts-block-title") as HTMLElement
       switch (type) {
         case "page": {
           const page = await logseq.Editor.getPage(id)
@@ -751,7 +768,7 @@ async function updateTabs(container: HTMLElement, sidebarBlocks: any[]) {
             page.properties?.icon ??
             (tab.classList.contains("kef-ts-pinned") ? "📄" : "")
           const displayName = `${icon}${icon ? " " : ""}${page.originalName}`
-          span.innerHTML = `${moved.has(id) ? "📍 " : ""}${displayName}`
+          span.innerText = `${moved.has(id) ? "📍 " : ""}${displayName}`
           break
         }
         case "block": {
@@ -772,19 +789,19 @@ async function updateTabs(container: HTMLElement, sidebarBlocks: any[]) {
               block.content,
             )}`
           }
-          span.innerHTML = `${moved.has(id) ? "📍 " : ""}${displayName}`
+          span.innerText = `${moved.has(id) ? "📍 " : ""}${displayName}`
           break
         }
         case "help": {
-          span.innerHTML = t("Help")
+          span.innerText = `${moved.has(id) ? "📍 " : ""}${t("Help")}`
           break
         }
         case "pageGraph": {
-          span.innerHTML = t("Page graph")
+          span.innerText = `${moved.has(id) ? "📍 " : ""}${t("Page graph")}`
           break
         }
         case "contents": {
-          span.innerHTML = t("Contents")
+          span.innerText = `${moved.has(id) ? "📍 " : ""}${t("Contents")}`
           break
         }
         default:
@@ -808,10 +825,11 @@ async function onDrop(
   const sourceIndex = Array.prototype.indexOf.call(target.children, el)
 
   if (el.classList.contains("kef-ts-pinned")) {
-    const pinData = await readPinData(storage)
+    const pinData = await readPinData(graphName, storage)
     const src = pinData.splice(sourceIndex, 1)
     pinData.splice(targetIndex, 0, ...src)
     await writePinData(
+      graphName,
       pinData.map((b) => b.name ?? b.uuid),
       storage,
     )
@@ -886,11 +904,11 @@ async function pin(index: number, container?: HTMLElement) {
   const block = await getBlock(index)
   if (block == null) return
 
-  const pinData = await readPinData(storage)
+  const pinData = await readPinData(graphName, storage)
   await persistBlockUUID(block)
   const pinned = pinData.map((b) => b.name ?? b.uuid)
   pinned.push(block.name ?? block.uuid)
-  await writePinData(pinned, storage)
+  await writePinData(graphName, pinned, storage)
 
   await moveTab(index, pinned.length - 1)
 }
@@ -901,7 +919,7 @@ async function unpin(index: number, container?: HTMLElement) {
   const block = await getBlock(index)
   if (block == null) return
 
-  const pinData = await readPinData(storage)
+  const pinData = await readPinData(graphName, storage)
   const to = pinData.length - 1
 
   const i = pinData.findIndex(
@@ -912,6 +930,7 @@ async function unpin(index: number, container?: HTMLElement) {
   }
 
   await writePinData(
+    graphName,
     pinData.map((b) => b.name ?? b.uuid),
     storage,
   )
