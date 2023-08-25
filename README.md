@@ -24,6 +24,8 @@ https://github.com/sethyuan/logseq-plugin-tabbed-sidebar/assets/3410293/2fd54298
 
 https://github.com/sethyuan/logseq-plugin-tabbed-sidebar/assets/3410293/7422c3d1-ea67-4943-a742-f6f42c05305e
 
+https://github.com/sethyuan/logseq-plugin-tabbed-sidebar/assets/3410293/0749d58c-2e85-4322-bd2d-4dfe50b0b762
+
 ## Buy me a coffee
 
 如果您认为我所开发的软件对您有所帮助，并且愿意给予肯定和支持，不妨扫描下方的二维码进行打赏。感谢您的支持与关注。
