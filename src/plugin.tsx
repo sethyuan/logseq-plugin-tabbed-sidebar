@@ -96,7 +96,7 @@ async function main() {
     },
   )
 
-  sidebarResizeObserver = new ResizeObserver((entries) => {
+  sidebarResizeObserver = new ResizeObserver((_entries) => {
     placeMovedTabs()
   })
 
@@ -128,6 +128,11 @@ async function main() {
     sidebarItemObserver.observe(sidebar, { childList: true, subtree: true })
 
     sidebarResizeObserver.observe(sidebar)
+
+    sidebar.addEventListener("pointerdown", onDragDown)
+    sidebar.addEventListener("pointerup", onDragUp)
+    sidebar.addEventListener("pointermove", onDragMove)
+    sidebar.addEventListener("pointercancel", onDragCancel)
   }
 
   const graphChangeOffHook = logseq.App.onCurrentGraphChanged(async () => {
@@ -169,7 +174,13 @@ function injectDeps() {
 }
 
 function initialize() {
+  const bars = parent.document.querySelectorAll(".kef-ts-drag-bar")
+  for (const bar of bars) {
+    bar.remove()
+  }
+
   moved.clear()
+
   sidebarResizeObserver.disconnect()
   const sidebar = parent.document.getElementById("right-sidebar")
   if (sidebar != null) {
@@ -253,7 +264,7 @@ function provideStyles() {
       left: 8px;
       right: 8px;
       z-index: var(--ls-z-index-level-1);
-      max-height: 25%;
+      height: 25%;
       overflow: auto;
     }
     .sidebar-item[data-moved="true"] .sidebar-item-header:has(.page-title) {
@@ -265,6 +276,16 @@ function provideStyles() {
     .sidebar-item[data-moved="true"] .sidebar-item-header + div.hidden {
       display: none !important;
       flex: unset !important;
+    }
+    .kef-ts-drag-bar {
+      position: fixed;
+      right: 8px;
+      height: 1px;
+      z-index: var(--ls-z-index-level-2);
+      cursor: row-resize;
+    }
+    .kef-ts-drag-bar:hover {
+      border-top: 2px solid var(--ls-active-primary-color);
     }
     .kef-ts-menu {
       position: fixed;
@@ -719,12 +740,30 @@ async function setActive(idx: number, sidebarBlocks?: any[], itemList?: any) {
       item.style.display = ""
       item.style.top = `${top}px`
       item.style.bottom = ""
+
+      const dragBar =
+        (parent.document.querySelector(
+          `.kef-ts-drag-bar[data-index="${i}"]`,
+        ) as HTMLElement | null) ?? createDragBar(i, "up")
+      const rect = item.getBoundingClientRect()
+      dragBar.style.display = ""
+      dragBar.style.top = `${rect.top + rect.height + 4}px`
+      dragBar.style.left = `${rect.left}px`
       top += item.offsetHeight + TAB_V_SPACING
     } else if (container.children[i].classList.contains("kef-ts-moved-down")) {
       item.dataset.moved = "true"
       item.style.display = ""
       item.style.bottom = `${bottom}px`
       item.style.top = ""
+
+      const dragBar =
+        (parent.document.querySelector(
+          `.kef-ts-drag-bar[data-index="${i}"]`,
+        ) as HTMLElement | null) ?? createDragBar(i, "down")
+      const rect = item.getBoundingClientRect()
+      dragBar.style.display = ""
+      dragBar.style.top = `${rect.top - 4}px`
+      dragBar.style.left = `${rect.left}px`
       bottom += item.offsetHeight + TAB_V_SPACING
     } else if (i === idx) {
       item.dataset.moved = ""
@@ -992,7 +1031,10 @@ async function moveBack(
     ".sidebar-item-list .sidebar-item.content",
   )
   const item = itemList[itemList.length - 1 - index] as HTMLElement
+  item.style.height = ""
   sidebarResizeObserver.unobserve(item)
+
+  removeDragBar(index)
 
   await setActive(activeIdx, sidebarBlocks)
 }
@@ -1057,6 +1099,83 @@ async function moveTab(from: number, to: number) {
   logseq.App.setStateFromStore("sidebar/blocks", stateSidebarBlocks)
 
   setTimeout(() => setActive(to), 16)
+}
+
+function createDragBar(index: number, dir: "up" | "down") {
+  const dragBar = parent.document.createElement("div")
+  dragBar.style.display = "none"
+  dragBar.classList.add("kef-ts-drag-bar")
+  dragBar.dataset.index = `${index}`
+  dragBar.dataset.dir = `${dir}`
+  const sidebar = parent.document.getElementById("right-sidebar-container")!
+  sidebar.append(dragBar)
+  return dragBar
+}
+
+function removeDragBar(index: number) {
+  const dragBar = parent.document.querySelector(
+    `.kef-ts-drag-bar[data-index="${index}"]`,
+  )
+  if (dragBar != null) {
+    dragBar.remove()
+  }
+}
+
+let draggingTarget: HTMLElement | null = null
+let startTop = ""
+
+function onDragDown(e: PointerEvent) {
+  if (draggingTarget) return
+  const target = e.target as HTMLElement
+  if (!target.classList?.contains("kef-ts-drag-bar")) return
+
+  e.preventDefault()
+  e.stopImmediatePropagation()
+
+  draggingTarget = target
+  startTop = target.style.top
+}
+
+function onDragMove(e: PointerEvent) {
+  if (!draggingTarget) return
+
+  e.preventDefault()
+  e.stopImmediatePropagation()
+
+  draggingTarget.style.top = `${e.y}px`
+}
+
+function onDragUp(e: PointerEvent) {
+  if (!draggingTarget) return
+
+  e.preventDefault()
+  e.stopImmediatePropagation()
+
+  const itemList = parent.document.querySelectorAll(
+    ".sidebar-item-list .sidebar-item.content",
+  )
+  const item = itemList[
+    itemList.length - 1 - +draggingTarget.dataset.index!
+  ] as HTMLElement | null
+  if (item == null) {
+    onDragCancel(e)
+    return
+  }
+  const dir = draggingTarget.dataset.dir
+  const diff = e.y - parseInt(startTop)
+  const newHeight = item.offsetHeight + (dir === "up" ? diff : -1 * diff)
+  item.style.height = `${newHeight}px`
+  draggingTarget = null
+}
+
+function onDragCancel(e: PointerEvent) {
+  if (!draggingTarget) return
+
+  e.preventDefault()
+  e.stopImmediatePropagation()
+
+  draggingTarget.style.top = startTop
+  draggingTarget = null
 }
 
 logseq.ready(main).catch(console.error)
