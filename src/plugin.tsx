@@ -18,6 +18,7 @@ const TOOLTIP_WIDTH = 300
 const DECORATIVE_W = -4
 const TAB_V_START = 48
 const TAB_V_SPACING = 8
+const TAB_V_DRAGBAR_SPACING = 4
 
 let sidebarResizeObserver: ResizeObserver
 
@@ -747,7 +748,7 @@ async function setActive(idx: number, sidebarBlocks?: any[], itemList?: any) {
         ) as HTMLElement | null) ?? createDragBar(i, "up")
       const rect = item.getBoundingClientRect()
       dragBar.style.display = ""
-      dragBar.style.top = `${rect.top + rect.height + 4}px`
+      dragBar.style.top = `${rect.top + rect.height + TAB_V_DRAGBAR_SPACING}px`
       dragBar.style.left = `${rect.left}px`
       top += item.offsetHeight + TAB_V_SPACING
     } else if (container.children[i].classList.contains("kef-ts-moved-down")) {
@@ -762,7 +763,7 @@ async function setActive(idx: number, sidebarBlocks?: any[], itemList?: any) {
         ) as HTMLElement | null) ?? createDragBar(i, "down")
       const rect = item.getBoundingClientRect()
       dragBar.style.display = ""
-      dragBar.style.top = `${rect.top - 4}px`
+      dragBar.style.top = `${rect.top - TAB_V_DRAGBAR_SPACING}px`
       dragBar.style.left = `${rect.left}px`
       bottom += item.offsetHeight + TAB_V_SPACING
     } else if (i === idx) {
@@ -1164,7 +1165,15 @@ function onDragUp(e: PointerEvent) {
   const dir = draggingTarget.dataset.dir
   const diff = e.y - parseInt(startTop)
   const newHeight = item.offsetHeight + (dir === "up" ? diff : -1 * diff)
-  item.style.height = `${newHeight}px`
+  item.style.height = `${newHeight - TAB_V_DRAGBAR_SPACING}px`
+  const dragBar = draggingTarget
+  setTimeout(() => {
+    const rect = item.getBoundingClientRect()
+    dragBar.style.top =
+      dir === "up"
+        ? `${rect.top + rect.height + TAB_V_DRAGBAR_SPACING}px`
+        : `${rect.top - TAB_V_DRAGBAR_SPACING}px`
+  }, 0)
   draggingTarget = null
 }
 
