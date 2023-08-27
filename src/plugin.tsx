@@ -17,7 +17,7 @@ import zhCN from "./translations/zh-CN.json"
 const TOOLTIP_WIDTH = 300
 const DECORATIVE_W = -4
 const TAB_V_START = 48
-const TAB_V_SPACING = 8
+const TAB_V_SPACING = 10
 const TAB_V_DRAGBAR_SPACING = 4
 const TAB_V_HEIGHT_KEY = "kef-ts-tab-height"
 
@@ -58,10 +58,30 @@ const placeMovedTabs = debounce(() => {
     if (tabs.children[i]?.classList.contains("kef-ts-moved-up")) {
       item.style.top = `${top}px`
       item.style.bottom = ""
+
+      const dragBar =
+        (parent.document.querySelector(
+          `.kef-ts-drag-bar[data-index="${i}"]`,
+        ) as HTMLElement | null) ?? createDragBar(i, "up")
+      const rect = item.getBoundingClientRect()
+      dragBar.style.display = ""
+      dragBar.style.top = `${rect.top + rect.height}px`
+      dragBar.style.left = `${rect.left}px`
+
       top += item.offsetHeight + TAB_V_SPACING
     } else if (tabs.children[i]?.classList.contains("kef-ts-moved-down")) {
       item.style.bottom = `${bottom}px`
       item.style.top = ""
+
+      const dragBar =
+        (parent.document.querySelector(
+          `.kef-ts-drag-bar[data-index="${i}"]`,
+        ) as HTMLElement | null) ?? createDragBar(i, "down")
+      const rect = item.getBoundingClientRect()
+      dragBar.style.display = ""
+      dragBar.style.top = `${rect.top - TAB_V_SPACING}px`
+      dragBar.style.left = `${rect.left}px`
+
       bottom += item.offsetHeight + TAB_V_SPACING
     }
   }
@@ -287,12 +307,19 @@ function provideStyles() {
     .kef-ts-drag-bar {
       position: fixed;
       right: 8px;
-      height: 1px;
+      height: 10px;
       z-index: var(--ls-z-index-level-2);
       cursor: row-resize;
     }
-    .kef-ts-drag-bar:hover {
-      border-top: 2px solid var(--ls-active-primary-color);
+    .kef-ts-drag-bar:hover::before {
+      content: "";
+      display: block;
+      position: absolute;
+      top: 5px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background-color: var(--ls-active-primary-color);
     }
     .kef-ts-menu {
       position: fixed;
@@ -740,6 +767,7 @@ async function setActive(idx: number, sidebarBlocks?: any[], itemList?: any) {
   const itemListLen = itemList.length
   let top = TAB_V_START // Default beginning
   let bottom = TAB_V_SPACING // Default beginning
+
   for (let i = 0; i < itemListLen; i++) {
     const item = itemList[itemListLen - 1 - i] as HTMLElement
     if (container.children[i].classList.contains("kef-ts-moved-up")) {
@@ -759,8 +787,9 @@ async function setActive(idx: number, sidebarBlocks?: any[], itemList?: any) {
         ) as HTMLElement | null) ?? createDragBar(i, "up")
       const rect = item.getBoundingClientRect()
       dragBar.style.display = ""
-      dragBar.style.top = `${rect.top + rect.height + TAB_V_DRAGBAR_SPACING}px`
+      dragBar.style.top = `${rect.top + rect.height}px`
       dragBar.style.left = `${rect.left}px`
+
       top += item.offsetHeight + TAB_V_SPACING
     } else if (container.children[i].classList.contains("kef-ts-moved-down")) {
       item.dataset.moved = "true"
@@ -779,8 +808,9 @@ async function setActive(idx: number, sidebarBlocks?: any[], itemList?: any) {
         ) as HTMLElement | null) ?? createDragBar(i, "down")
       const rect = item.getBoundingClientRect()
       dragBar.style.display = ""
-      dragBar.style.top = `${rect.top - TAB_V_DRAGBAR_SPACING}px`
+      dragBar.style.top = `${rect.top - TAB_V_SPACING}px`
       dragBar.style.left = `${rect.left}px`
+
       bottom += item.offsetHeight + TAB_V_SPACING
     } else if (i === idx) {
       item.style.display = ""
