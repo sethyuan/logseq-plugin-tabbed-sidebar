@@ -521,7 +521,7 @@ async function checkForPins(sidebarBlocks: any[]) {
   const pinnedBlocks = await readPinData(graphName, storage)
 
   const hasOpenings = pinnedBlocks.some(
-    (b) => !sidebarBlocks.some(([, eid]) => b.id === eid),
+    (b) => !sidebarBlocks.some(([, eid]) => b.id === eid || b.name === eid),
   )
 
   if (hasOpenings) {
