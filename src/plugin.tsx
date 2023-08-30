@@ -731,6 +731,9 @@ async function setActive(idx: number, sidebarBlocks?: any[], itemList?: any) {
   if (sidebarBlocks == null) {
     sidebarBlocks = (await logseq.App.getStateFromStore("sidebar/blocks"))!
   }
+  if (sidebarBlocks.length === 0) {
+    sidebarBlocks.push([graphUrl, "contents", "contents"])
+  }
 
   const pinData = await readPinData(graphName, storage)
 
