@@ -164,6 +164,7 @@ async function main() {
 
     initialize()
 
+    logseq.App.setRightSidebarVisible(false)
     logseq.App.clearRightSidebarBlocks()
   })
 
