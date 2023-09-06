@@ -139,7 +139,7 @@ async function main() {
             isElement(node) &&
             (node.classList.contains("sidebar-item") || existent)
           ) {
-            refreshTabs(node.parentElement?.classList.contains("contents"))
+            refreshTabs()
             return
           }
         }
@@ -425,7 +425,7 @@ function renderTabs() {
   drake.on("drop", onDrop)
 }
 
-async function refreshTabs(isContents: boolean = false) {
+async function refreshTabs() {
   const sidebarBlocks = await logseq.App.getStateFromStore("sidebar/blocks")
 
   if (sidebarBlocks.length === 0) {
@@ -497,13 +497,6 @@ async function refreshTabs(isContents: boolean = false) {
   if (nextActiveIdx > -1) {
     await setActive(nextActiveIdx, sidebarBlocks)
     nextActiveIdx = -1
-  } else if (isContents) {
-    const index = sidebarBlocks.findIndex(
-      ([, , type]: [any, any, string]) => type === "contents",
-    )
-    if (index > -1) {
-      await setActive(sidebarBlocks.length - 1 - index, sidebarBlocks)
-    }
   } else if (!reordering) {
     if (lastTabsCount < newTabsCount) {
       await setActive(newTabsCount - 1, sidebarBlocks)
@@ -530,10 +523,14 @@ async function checkForPins(sidebarBlocks: any[]) {
 
   if (hasOpenings) {
     const filtered = sidebarBlocks.filter(([, eid]) =>
-      pinnedBlocks.every((b) => eid !== b.id),
+      pinnedBlocks.every((b) => eid !== b.id && eid !== b.name),
     )
     const pinned = pinnedBlocks
-      .map((b) => [graphUrl, b.id, b.name ? "page" : "block"])
+      .map((b) =>
+        b.name === "contents"
+          ? [graphUrl, "contents", "contents"]
+          : [graphUrl, b.id, b.name ? "page" : "block"],
+      )
       .reverse()
     const newSidebarBlocks = [...filtered, ...pinned]
     return [hasOpenings, newSidebarBlocks]
@@ -1150,18 +1147,20 @@ async function closeAll(container: HTMLElement) {
 }
 
 async function moveTab(from: number, to: number) {
-  const stateSidebarBlocks = await logseq.App.getStateFromStore(
-    "sidebar/blocks",
-  )
+  if (from !== to) {
+    const stateSidebarBlocks = await logseq.App.getStateFromStore(
+      "sidebar/blocks",
+    )
 
-  const stateSourceIndex = stateSidebarBlocks.length - 1 - from
-  const stateTargetIndex = stateSidebarBlocks.length - 1 - to
-  const sourceItem = stateSidebarBlocks.splice(stateSourceIndex, 1)
-  stateSidebarBlocks.splice(stateTargetIndex, 0, ...sourceItem)
+    const stateSourceIndex = stateSidebarBlocks.length - 1 - from
+    const stateTargetIndex = stateSidebarBlocks.length - 1 - to
+    const sourceItem = stateSidebarBlocks.splice(stateSourceIndex, 1)
+    stateSidebarBlocks.splice(stateTargetIndex, 0, ...sourceItem)
 
-  reordering = true
+    reordering = true
 
-  logseq.App.setStateFromStore("sidebar/blocks", stateSidebarBlocks)
+    logseq.App.setStateFromStore("sidebar/blocks", stateSidebarBlocks)
+  }
 
   setTimeout(() => setActive(to), 16)
 }
