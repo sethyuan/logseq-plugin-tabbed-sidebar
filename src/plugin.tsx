@@ -898,15 +898,20 @@ async function updateTabs(container: HTMLElement, sidebarBlocks: any[]) {
           break
         }
         case "help": {
-          span.innerText = `${moved.has(id) ? "📍 " : ""}${t("Help")}`
+          span.innerText = `${moved.has(id) ? "📍 " : "📄"}${t("Help")}`
           break
         }
         case "pageGraph": {
-          span.innerText = `${moved.has(id) ? "📍 " : ""}${t("Page graph")}`
+          span.innerText = `${moved.has(id) ? "📍 " : "📄"}${t("Page graph")}`
           break
         }
         case "contents": {
-          span.innerText = `${moved.has(id) ? "📍 " : ""}${t("Contents")}`
+          const page = (await logseq.Editor.getPage("contents"))!
+          const icon =
+            page.properties?.icon ??
+            (tab.classList.contains("kef-ts-pinned") ? "📄" : "")
+          const displayName = `${icon}${icon ? " " : ""}${t("Contents")}`
+          span.innerText = `${moved.has(id) ? "📍 " : ""}${displayName}`
           break
         }
         default:
