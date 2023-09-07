@@ -895,11 +895,11 @@ async function updateTabs(container: HTMLElement, sidebarBlocks: any[]) {
           break
         }
         case "help": {
-          span.innerText = `${moved.has(id) ? "📍 " : "📄"}${t("Help")}`
+          span.innerText = `${moved.has(id) ? "📍 " : "🧐 "}${t("Help")}`
           break
         }
         case "pageGraph": {
-          span.innerText = `${moved.has(id) ? "📍 " : "📄"}${t("Page graph")}`
+          span.innerText = `${moved.has(id) ? "📍 " : "🧠 "}${t("Page graph")}`
           break
         }
         case "contents": {
