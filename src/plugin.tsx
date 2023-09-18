@@ -93,13 +93,9 @@ const placeMovedTabs = debounce(() => {
   }
 
   if (bottom === TAB_V_SPACING) {
-    sidebarListContainer.style.height = `calc(100vh - ${
-      top + bottom + TAB_V_START
-    }px)`
+    sidebarListContainer.style.height = `calc(100vh - ${top + bottom}px)`
   } else {
-    sidebarListContainer.style.height = `calc(100vh - ${
-      top + bottom + TAB_V_START
-    }px - 32px)`
+    sidebarListContainer.style.height = `calc(100vh - ${top + bottom}px - 32px)`
   }
 }, 100) as () => {}
 
@@ -842,12 +838,10 @@ async function setActive(idx: number, sidebarBlocks?: any[], itemList?: any) {
   ) as HTMLElement | null
   if (sidebarListContainer != null) {
     if (bottom === TAB_V_SPACING) {
-      sidebarListContainer.style.height = `calc(100vh - ${
-        top + bottom + TAB_V_START
-      }px)`
+      sidebarListContainer.style.height = `calc(100vh - ${top + bottom}px)`
     } else {
       sidebarListContainer.style.height = `calc(100vh - ${
-        top + bottom + TAB_V_START
+        top + bottom
       }px - 32px)`
     }
   }
