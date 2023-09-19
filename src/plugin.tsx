@@ -19,6 +19,7 @@ const DECORATIVE_W = -4
 const TAB_V_START = 48
 const TAB_V_SPACING = 10
 const TAB_V_DRAGBAR_SPACING = 4
+const TAB_V_SPACE_FIX = 28
 const TAB_V_HEIGHT_KEY = "kef-ts-tab-height"
 
 let sidebarResizeObserver: ResizeObserver
@@ -93,7 +94,9 @@ const placeMovedTabs = debounce(() => {
   }
 
   if (bottom === TAB_V_SPACING) {
-    sidebarListContainer.style.height = `calc(100vh - ${top + bottom}px)`
+    sidebarListContainer.style.height = `calc(100vh - ${
+      top + bottom + TAB_V_SPACE_FIX
+    }px)`
   } else {
     sidebarListContainer.style.height = `calc(100vh - ${top + bottom}px - 32px)`
   }
@@ -838,7 +841,9 @@ async function setActive(idx: number, sidebarBlocks?: any[], itemList?: any) {
   ) as HTMLElement | null
   if (sidebarListContainer != null) {
     if (bottom === TAB_V_SPACING) {
-      sidebarListContainer.style.height = `calc(100vh - ${top + bottom}px)`
+      sidebarListContainer.style.height = `calc(100vh - ${
+        top + bottom + TAB_V_SPACE_FIX
+      }px)`
     } else {
       sidebarListContainer.style.height = `calc(100vh - ${
         top + bottom
