@@ -2,7 +2,7 @@ import { BlockEntity, PageEntity } from "@logseq/libs/dist/LSPlugin.user"
 import { IAsyncStorage } from "@logseq/libs/dist/modules/LSPlugin.Storage"
 import { parse } from "./marked-renderer"
 
-const TASK_REGEX = /^(?:TODO|LATER|DOING|NOW|DONE|CANCELED|WAITING) /
+const TASK_REGEX = /^(?:TODO|LATER|DOING|NOW|DONE|CANCEL{1,2}ED|WAITING) /
 
 const PIN_KEY = "pin.json"
 
