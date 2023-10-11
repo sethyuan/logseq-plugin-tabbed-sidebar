@@ -611,6 +611,9 @@ async function onTabContextMenu(e: MouseEvent) {
   const x = Math.min(e.clientX, parent.innerWidth - 168)
   const isPinned = el.classList.contains("kef-ts-pinned")
   const isMoved = el.classList.contains("kef-ts-moved")
+  const isLastPinned =
+    el.nextElementSibling &&
+    !el.nextElementSibling.classList.contains("kef-ts-pinned")
 
   render(
     <Menu x={x} y={e.clientY} onClose={() => unrender(menuContainer)}>
@@ -658,6 +661,14 @@ async function onTabContextMenu(e: MouseEvent) {
           }
         >
           {t("Move Back")}
+        </button>
+      )}
+      {isLastPinned && (
+        <button
+          class="kef-ts-menu-item"
+          onClick={() => closeRight(index, menuContainer)}
+        >
+          {t("Close Tabs to the Right")}
         </button>
       )}
       {!isPinned && (
