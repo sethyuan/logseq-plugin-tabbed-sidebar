@@ -1130,7 +1130,9 @@ async function close(index: number, container?: HTMLElement) {
     )
   }
 
-  await logseq.App.setStateFromStore("sidebar/blocks", sidebarBlocks)
+  logseq.App.setStateFromStore("sidebar/blocks", sidebarBlocks)
+
+  removeDragBar(index)
 }
 
 async function closeOthers(index: number, container: HTMLElement) {
