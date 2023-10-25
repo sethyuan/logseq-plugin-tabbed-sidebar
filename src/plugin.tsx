@@ -458,10 +458,34 @@ async function refreshTabs() {
     return
   }
 
-  const [hasOpenings, newSidebarBlocks] = await checkForPins(sidebarBlocks)
+  const [hasOpenings, newSidebarBlocks, pinItems] = await checkForPins(
+    sidebarBlocks,
+  )
   if (hasOpenings) {
     await logseq.App.setStateFromStore("sidebar/blocks", newSidebarBlocks)
     return
+  }
+  for (let i = 0; i < pinItems.length; i++) {
+    const item = pinItems[i]
+    if (item.moved) {
+      const block =
+        (await logseq.Editor.getPage(item.id)) ??
+        (await logseq.Editor.getBlock(item.id))
+      const i =
+        item.id === "contents"
+          ? sidebarBlocks.findIndex(([, id]: any) => id === "contents")
+          : sidebarBlocks.findIndex(([, id]: any) => id === block?.id)
+      if (i > -1) {
+        moved.set(
+          item.id === "contents" ? (item.id as any) : block!.id,
+          item.moved,
+        )
+        sessionStorage.setItem(
+          `${TAB_V_HEIGHT_KEY}-${sidebarBlocks.length - 1 - i}`,
+          item.height ?? "",
+        )
+      }
+    }
   }
 
   const container = parent.document.getElementById("kef-ts-tabs")
@@ -514,7 +538,9 @@ async function refreshTabs() {
 }
 
 async function checkForPins(sidebarBlocks: any[]) {
-  const pinnedBlocks = await readPinData(graphName, storage)
+  const pinData = await readPinData(graphName, storage)
+  const combined = [...pinData.pinned, ...pinData.unpinned]
+  const pinnedBlocks = combined.map((item) => item.block!)
 
   const hasOpenings = pinnedBlocks.some(
     (b) => !sidebarBlocks.some(([, eid]) => b.id === eid || b.name === eid),
@@ -532,10 +558,10 @@ async function checkForPins(sidebarBlocks: any[]) {
       )
       .reverse()
     const newSidebarBlocks = [...filtered, ...pinned]
-    return [hasOpenings, newSidebarBlocks]
+    return [hasOpenings, newSidebarBlocks, combined] as const
   }
 
-  return [hasOpenings, null]
+  return [hasOpenings, null, combined] as const
 }
 
 async function onTabCloseClick(e: MouseEvent) {
@@ -652,13 +678,7 @@ async function onTabContextMenu(e: MouseEvent) {
       {isMoved && (
         <button
           class="kef-ts-menu-item"
-          onClick={() =>
-            moveBack(
-              index,
-              menuContainer,
-              el.classList.contains("kef-ts-moved-up"),
-            )
-          }
+          onClick={() => moveBack(index, menuContainer)}
         >
           {t("Move Back")}
         </button>
@@ -757,7 +777,7 @@ async function setActive(idx: number, sidebarBlocks?: any[], itemList?: any) {
       tab.classList.remove("kef-ts-active")
     }
 
-    if (i < pinData.length) {
+    if (i < pinData.pinned.length) {
       tab.classList.add("kef-ts-pinned")
     } else {
       tab.classList.remove("kef-ts-pinned")
@@ -943,13 +963,9 @@ async function onDrop(
 
   if (el.classList.contains("kef-ts-pinned")) {
     const pinData = await readPinData(graphName, storage)
-    const src = pinData.splice(sourceIndex, 1)
-    pinData.splice(targetIndex, 0, ...src)
-    await writePinData(
-      graphName,
-      pinData.map((b) => b.name ?? b.uuid),
-      storage,
-    )
+    const src = pinData.pinned.splice(sourceIndex, 1)
+    pinData.pinned.splice(targetIndex, 0, ...src)
+    await writePinData(graphName, pinData, storage)
   }
 
   const stateSidebarBlocks = await logseq.App.getStateFromStore(
@@ -1023,11 +1039,20 @@ async function pin(index: number, container?: HTMLElement) {
 
   const pinData = await readPinData(graphName, storage)
   await persistBlockUUID(block)
-  const pinned = pinData.map((b) => b.name ?? b.uuid)
-  pinned.push(block.name ?? block.uuid)
-  await writePinData(graphName, pinned, storage)
+  const i = pinData.unpinned.findIndex(
+    (item) => item.id === (block.name ?? block.uuid),
+  )
+  if (i > -1) {
+    const item = pinData.unpinned.splice(i, 1)
+    pinData.pinned.push(...item)
+  } else {
+    pinData.pinned.push({
+      id: block.name ?? block.uuid,
+    })
+  }
+  await writePinData(graphName, pinData, storage)
 
-  await moveTab(index, pinned.length - 1)
+  await moveTab(index, pinData.pinned.length - 1)
 }
 
 async function unpin(index: number, container?: HTMLElement) {
@@ -1037,26 +1062,28 @@ async function unpin(index: number, container?: HTMLElement) {
   if (block == null) return
 
   const pinData = await readPinData(graphName, storage)
-  const to = pinData.length - 1
+  const to = pinData.pinned.length - 1
 
-  const i = pinData.findIndex(
-    (b) => b.name === block.name || b.uuid === block.uuid,
+  const i = pinData.pinned.findIndex(
+    (item) => item.id === (block.name ?? block.uuid),
   )
   if (i > -1) {
-    pinData.splice(i, 1)
+    const [item] = pinData.pinned.splice(i, 1)
+    if (item.moved) {
+      pinData.unpinned.push(item)
+    }
   }
 
-  await writePinData(
-    graphName,
-    pinData.map((b) => b.name ?? b.uuid),
-    storage,
-  )
+  await writePinData(graphName, pinData, storage)
 
   await moveTab(index, to)
 }
 
 async function moveUp(index: number, container?: HTMLElement) {
   unrender(container)
+
+  const block = await getBlock(index)
+  if (block == null) return
 
   const sidebarBlocks = await logseq.App.getStateFromStore("sidebar/blocks")
   const [, id] = sidebarBlocks[sidebarBlocks.length - 1 - index]
@@ -1068,11 +1095,31 @@ async function moveUp(index: number, container?: HTMLElement) {
   const item = itemList[itemList.length - 1 - index] as HTMLElement
   sidebarResizeObserver.observe(item)
 
+  const pinData = await readPinData(graphName, storage)
+  await persistBlockUUID(block)
+  const pinItem = pinData.pinned.find(
+    (item) => item.id === (block.name ?? block.uuid),
+  )
+  if (pinItem) {
+    pinItem.moved = "up"
+    pinItem.height = item.style.height
+  } else {
+    pinData.unpinned.push({
+      id: block.name ?? block.uuid,
+      moved: "up",
+      height: item.style.height,
+    })
+  }
+  await writePinData(graphName, pinData, storage)
+
   await setActive(activeIdx, sidebarBlocks, itemList)
 }
 
 async function moveDown(index: number, container?: HTMLElement) {
   unrender(container)
+
+  const block = await getBlock(index)
+  if (block == null) return
 
   const sidebarBlocks = await logseq.App.getStateFromStore("sidebar/blocks")
   const [, id] = sidebarBlocks[sidebarBlocks.length - 1 - index]
@@ -1084,15 +1131,31 @@ async function moveDown(index: number, container?: HTMLElement) {
   const item = itemList[itemList.length - 1 - index] as HTMLElement
   sidebarResizeObserver.observe(item)
 
+  const pinData = await readPinData(graphName, storage)
+  await persistBlockUUID(block)
+  const pinItem = pinData.pinned.find(
+    (item) => item.id === (block.name ?? block.uuid),
+  )
+  if (pinItem) {
+    pinItem.moved = "down"
+    pinItem.height = item.style.height
+  } else {
+    pinData.unpinned.push({
+      id: block.name ?? block.uuid,
+      moved: "down",
+      height: item.style.height,
+    })
+  }
+  await writePinData(graphName, pinData, storage)
+
   await setActive(activeIdx, sidebarBlocks, itemList)
 }
 
-async function moveBack(
-  index: number,
-  container: HTMLElement | undefined,
-  fromUp: boolean,
-) {
+async function moveBack(index: number, container: HTMLElement | undefined) {
   unrender(container)
+
+  const block = await getBlock(index)
+  if (block == null) return
 
   const sidebarBlocks = await logseq.App.getStateFromStore("sidebar/blocks")
   const [, id] = sidebarBlocks[sidebarBlocks.length - 1 - index]
@@ -1107,6 +1170,24 @@ async function moveBack(
   sessionStorage.removeItem(`${TAB_V_HEIGHT_KEY}-${index}`)
 
   removeDragBar(index)
+
+  const pinData = await readPinData(graphName, storage)
+  await persistBlockUUID(block)
+  const pinItem = pinData.pinned.find(
+    (item) => item.id === (block.name ?? block.uuid),
+  )
+  if (pinItem) {
+    delete pinItem.moved
+    delete pinItem.height
+  } else {
+    const i = pinData.unpinned.findIndex(
+      (item) => item.id === (block.name ?? block.uuid),
+    )
+    if (i > -1) {
+      pinData.unpinned.splice(i, 1)
+    }
+  }
+  await writePinData(graphName, pinData, storage)
 
   await setActive(activeIdx, sidebarBlocks)
 }
@@ -1221,7 +1302,7 @@ function onDragMove(e: PointerEvent) {
   draggingTarget.style.top = `${e.y}px`
 }
 
-function onDragUp(e: PointerEvent) {
+async function onDragUp(e: PointerEvent) {
   if (!draggingTarget) return
 
   e.preventDefault()
@@ -1245,6 +1326,19 @@ function onDragUp(e: PointerEvent) {
     `${TAB_V_HEIGHT_KEY}-${draggingTarget.dataset.index}`,
     item.style.height,
   )
+
+  const block = await getBlock(+draggingTarget.dataset.index!)
+  if (block) {
+    const pinData = await readPinData(graphName, storage)
+    const movedItem =
+      pinData.pinned.find((item) => item.id === (block.name ?? block.uuid)) ??
+      pinData.unpinned.find((item) => item.id === (block.name ?? block.uuid))
+    if (movedItem) {
+      movedItem.height = item.style.height
+      await writePinData(graphName, pinData, storage)
+    }
+  }
+
   const dragBar = draggingTarget
   setTimeout(() => {
     const rect = item.getBoundingClientRect()

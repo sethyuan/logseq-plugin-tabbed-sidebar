@@ -50,46 +50,101 @@ export function isElement(node: Node): node is HTMLElement {
   return node.nodeType === 1
 }
 
+export interface PinData {
+  pinned: PinItem[]
+  unpinned: PinItem[]
+}
+
+export interface PinItem {
+  id: string
+  block?: BlockEntity | PageEntity | null
+  moved?: "up" | "down"
+  height?: string
+}
+
 export async function readPinData(
   graphName: string,
   storage: IAsyncStorage,
-): Promise<(BlockEntity | PageEntity)[]> {
+): Promise<PinData> {
   const pinKey = `${graphName}-${PIN_KEY}`
   try {
-    if (!(await storage.hasItem(pinKey))) return []
+    if (!(await storage.hasItem(pinKey))) return { pinned: [], unpinned: [] }
     const pinStr = (await storage.getItem(pinKey))!
-    const pinned: string[] = JSON.parse(pinStr)
-    const blocks = (
-      await Promise.all(
-        pinned.map(
-          async (id: string) =>
-            (await logseq.Editor.getPage(id)) ??
-            (await logseq.Editor.getBlock(id)),
-        ),
-      )
-    ).filter((b) => b != null) as (BlockEntity | PageEntity)[]
+    const json = JSON.parse(pinStr)
+    const pinData: PinData = Array.isArray(json)
+      ? {
+          pinned: (
+            await Promise.all(
+              json.map(async (id: string) => {
+                return {
+                  id,
+                  pinned: true,
+                  block:
+                    (await logseq.Editor.getPage(id)) ??
+                    (await logseq.Editor.getBlock(id)),
+                }
+              }),
+            )
+          ).filter((item) => item.block != null) as PinItem[],
+          unpinned: [],
+        }
+      : {
+          pinned: (
+            await Promise.all(
+              json.pinned.map(async (item: PinItem) => {
+                item.block =
+                  (await logseq.Editor.getPage(item.id)) ??
+                  (await logseq.Editor.getBlock(item.id))
+                return item
+              }),
+            )
+          ).filter((item) => item.block != null) as PinItem[],
+          unpinned: (
+            await Promise.all(
+              json.unpinned.map(async (item: PinItem) => {
+                item.block =
+                  (await logseq.Editor.getPage(item.id)) ??
+                  (await logseq.Editor.getBlock(item.id))
+                return item
+              }),
+            )
+          ).filter((item) => item.block != null) as PinItem[],
+        }
 
-    if (blocks.length < pinned.length) {
-      await writePinData(
-        graphName,
-        blocks.map((b) => b.name ?? b.uuid),
-        storage,
-      )
+    if (
+      Array.isArray(json)
+        ? pinData.pinned.length < json.length
+        : pinData.pinned.length < json.pinned.length ||
+          pinData.unpinned.length < json.unpinned.length
+    ) {
+      await writePinData(graphName, pinData, storage)
     }
 
-    return blocks
+    return pinData
   } catch (err) {
     console.error(err)
-    return []
+    return { pinned: [], unpinned: [] }
   }
 }
 
 export async function writePinData(
   graphName: string,
-  data: string[],
+  data: PinData,
   storage: IAsyncStorage,
 ) {
   const pinKey = `${graphName}-${PIN_KEY}`
+  data = {
+    pinned: data.pinned.map((item) => {
+      const ret = { ...item }
+      delete ret.block
+      return ret
+    }),
+    unpinned: data.unpinned.map((item) => {
+      const ret = { ...item }
+      delete ret.block
+      return ret
+    }),
+  }
   await storage.setItem(pinKey, JSON.stringify(data))
 }
 
