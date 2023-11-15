@@ -518,7 +518,9 @@ async function refreshTabs() {
   }
 
   const newTabsCount = container.childElementCount - 1
-  if (nextActiveIdx > -1) {
+  if (hasOpenings) {
+    await setActive(0, sidebarBlocks)
+  } else if (nextActiveIdx > -1) {
     await setActive(nextActiveIdx, sidebarBlocks)
     nextActiveIdx = -1
   } else if (!reordering) {
