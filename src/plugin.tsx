@@ -429,10 +429,6 @@ async function refreshTabs() {
 
   if (sidebarBlocks.length === 0) {
     initialize()
-
-    const contents = [graphUrl, "contents", "contents"]
-    sidebarBlocks.push(contents)
-    await logseq.App.setStateFromStore("sidebar/blocks", [contents])
   }
 
   if (
@@ -464,7 +460,12 @@ async function refreshTabs() {
   if (hasOpenings) {
     await logseq.App.setStateFromStore("sidebar/blocks", newSidebarBlocks)
     return
+  } else if (sidebarBlocks.length === 0) {
+    const contents = [graphUrl, "contents", "contents"]
+    sidebarBlocks.push(contents)
+    await logseq.App.setStateFromStore("sidebar/blocks", [contents])
   }
+
   for (let i = 0; i < pinItems.length; i++) {
     const item = pinItems[i]
     if (item.moved) {
