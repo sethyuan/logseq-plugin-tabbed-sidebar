@@ -459,6 +459,8 @@ async function refreshTabs() {
   )
   if (hasOpenings) {
     await logseq.App.setStateFromStore("sidebar/blocks", newSidebarBlocks)
+    lastTabsCount = newSidebarBlocks.length
+    activeIdx = 0
     return
   } else if (sidebarBlocks.length === 0) {
     const contents = [graphUrl, "contents", "contents"]
@@ -518,9 +520,7 @@ async function refreshTabs() {
   }
 
   const newTabsCount = container.childElementCount - 1
-  if (hasOpenings) {
-    await setActive(0, sidebarBlocks)
-  } else if (nextActiveIdx > -1) {
+  if (nextActiveIdx > -1) {
     await setActive(nextActiveIdx, sidebarBlocks)
     nextActiveIdx = -1
   } else if (!reordering) {
