@@ -459,8 +459,10 @@ async function refreshTabs() {
   )
   if (hasOpenings) {
     await logseq.App.setStateFromStore("sidebar/blocks", newSidebarBlocks)
-    lastTabsCount = newSidebarBlocks.length
-    activeIdx = 0
+    if (newSidebarBlocks.length <= pinItems.length) {
+      lastTabsCount = newSidebarBlocks.length
+      activeIdx = 0
+    }
     return
   } else if (sidebarBlocks.length === 0) {
     const contents = [graphUrl, "contents", "contents"]
