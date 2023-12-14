@@ -598,6 +598,8 @@ async function onTabClick(e: MouseEvent) {
 
   e.stopImmediatePropagation()
 
+  if (el.classList.contains("kef-ts-moved")) return
+
   if (e.shiftKey) {
     await openTab(index)
   } else {
@@ -1200,6 +1202,13 @@ async function moveBack(index: number, container: HTMLElement | undefined) {
 async function close(index: number, container?: HTMLElement) {
   unrender(container)
 
+  const tabs = parent.document.querySelectorAll("#kef-ts-tabs > .kef-ts-header")
+  const tab = tabs[index]
+
+  if (tab.classList.contains("kef-ts-moved")) {
+    await moveBack(index, container)
+  }
+
   const sidebarBlocks = await logseq.App.getStateFromStore("sidebar/blocks")
   const realIndex = sidebarBlocks.length - 1 - index
   if (realIndex < 0) {
@@ -1208,7 +1217,6 @@ async function close(index: number, container?: HTMLElement) {
   }
   sidebarBlocks.splice(realIndex, 1)
 
-  const tabs = parent.document.querySelectorAll("#kef-ts-tabs > .kef-ts-header")
   if (tabs) {
     nextActiveIdx = Math.min(
       tabs.length - 2,
